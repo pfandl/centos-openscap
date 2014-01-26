@@ -5,8 +5,8 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        0.9.13
-Release:        4%{?dist}
+Version:        1.0.3
+Release:        2%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
@@ -35,8 +35,7 @@ for the expression of Computer Network Defense related information.
 %package        devel
 Summary:        Development files for %{name}
 Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release}
-Requires:       %{name}-engine-sce = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       libxml2-devel
 Requires:       pkgconfig
 
@@ -47,18 +46,17 @@ developing applications that use %{name}.
 %package        python
 Summary:        Python bindings for %{name}
 Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 BuildRequires:  python-devel
 
 %description    python
 The %{name}-python package contains the bindings so that %{name}
 libraries can be used by python.
 
-
 %package        utils
 Summary:        Openscap utilities
 Group:          Applications/System
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       libcurl >= 7.12.0
 Requires:       rpmdevtools rpm-build
 BuildRequires:  libcurl-devel >= 7.12.0
@@ -71,7 +69,7 @@ compliance checking using SCAP content.
 %package        extra-probes
 Summary:        SCAP probes
 Group:          Applications/System
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 BuildRequires:  openldap-devel
 BuildRequires:  GConf2-devel
 #BuildRequires:  opendbx - for sql
@@ -81,14 +79,25 @@ The %{name}-extra-probes package contains additional probes that are not
 commonly used and require additional dependencies.
 
 %package        engine-sce
-Summary:	Script Check Engine plug-in for OpenSCAP
+Summary:        Script Check Engine plug-in for OpenSCAP
 Group:          Applications/System
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    engine-sce
 The Script Check Engine is non-standard extension to SCAP protocol. This
 engine allows content authors to avoid OVAL language and write their assessment
 commands using a scripting language (Bash, Perl, Python, Ruby, ...).
+
+%package        engine-sce-devel
+Summary:        Development files for %{name}-engine-sce
+Group:          Development/Libraries
+Requires:       %{name}-devel%{?_isa} = %{version}-%{release}
+Requires:       %{name}-engine-sce%{?_isa} = %{version}-%{release}
+Requires:       pkgconfig
+
+%description    engine-sce-devel
+The %{name}-engine-sce-devel package contains libraries and header files
+for developing applications that use %{name}-engine-sce.
 
 %package        selinux
 Summary:        SELinux policy module for openscap
@@ -226,9 +235,15 @@ exit 0
 %files devel
 %defattr(-,root,root,-)
 %doc docs/{html,examples}/
-%{_includedir}/*
-%{_libdir}/*.so
+%{_libdir}/libopenscap.so
 %{_libdir}/pkgconfig/*.pc
+%{_includedir}/openscap
+%exclude %{_includedir}/openscap/sce_engine_api.h
+
+%files engine-sce-devel
+%defattr(-,root,root,-)
+%{_libdir}/libopenscap_sce.so
+%{_includedir}/openscap/sce_engine_api.h
 
 %files utils
 %defattr(-,root,root,-)
@@ -250,6 +265,44 @@ exit 0
 # %{_mandir}/man8/openscap_selinux.8.*
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 1.0.3-2
+- Mass rebuild 2014-01-24
+
+* Tue Jan 14 2014 Šimon Lukašík <slukasik@redhat.com> - 1.0.3-1
+- upgrade
+- This upstream release addresses: #1052142
+
+* Fri Jan 10 2014 Šimon Lukašík <slukasik@redhat.com> - 1.0.2-1
+- upgrade
+- This upstream release addresses: #1018291, #1029879, #1026833
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 1.0.1-2
+- Mass rebuild 2013-12-27
+
+* Thu Nov 28 2013 Šimon Lukašík <slukasik@redhat.com> - 1.0.1-1
+- upgrade
+
+* Tue Nov 26 2013 Šimon Lukašík <slukasik@redhat.com> - 1.0.0-3
+- expand LT_CURRENT_MINUS_AGE correctly
+
+* Thu Nov 21 2013 Šimon Lukašík <slukasik@redhat.com> - 1.0.0-2
+- dlopen libopenscap_sce.so.{current-age} explicitly
+  That allows for SCE to work without openscap-engine-sce-devel
+
+* Tue Nov 19 2013 Šimon Lukašík <slukasik@redhat.com> - 1.0.0-1
+- upgrade
+- package openscap-engine-sce-devel separately
+
+* Fri Nov 15 2013 Šimon Lukašík <slukasik@redhat.com> - 0.9.13-7
+- do not obsolete openscap-conten just drop it (#1028706)
+  scap-security-guide will bring the Obsoletes tag
+
+* Thu Nov 14 2013 Šimon Lukašík <slukasik@redhat.com> - 0.9.13-6
+- only non-noarch packages should be requiring specific architecture
+
+* Sat Nov 09 2013 Šimon Lukašík <slukasik@redhat.com> 0.9.13-5
+- specify architecture when requiring base package
+
 * Fri Nov 08 2013 Šimon Lukašík <slukasik@redhat.com> 0.9.13-4
 - specify dependency between engine and devel sub-package
 
