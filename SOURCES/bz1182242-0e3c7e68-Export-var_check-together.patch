@@ -1,0 +1,28 @@
+From 0e3c7e6833630d55d00ac3e91cdb2ae067fabcb6 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Fri, 16 Jan 2015 15:57:31 +0100
+Subject: [PATCH] Export @var_check together with @var_ref for objects
+
+Addresses rhbz#1182242 and rhbz#1159289.
+---
+ src/OVAL/oval_objectContent.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/OVAL/oval_objectContent.c b/src/OVAL/oval_objectContent.c
+index eb59c25..ad620d9 100644
+--- a/src/OVAL/oval_objectContent.c
++++ b/src/OVAL/oval_objectContent.c
+@@ -403,9 +403,8 @@ xmlNode *oval_object_content_to_dom(struct oval_object_content *content, xmlDoc
+ 			struct oval_entity *entity = oval_object_content_get_entity(content);
+ 			content_node = oval_entity_to_dom(entity, doc, parent);
+ 			oval_check_t check = oval_object_content_get_varCheck(content);
+-			oval_entity_varref_type_t vtype = oval_entity_get_varref_type(entity);
+ 
+-			if (check != OVAL_CHECK_ALL || vtype != OVAL_ENTITY_VARREF_NONE)
++			if (check != OVAL_CHECK_ALL || xmlHasProp(content_node, BAD_CAST "var_ref"))
+ 				xmlNewProp(content_node, BAD_CAST "var_check", BAD_CAST oval_check_get_text(check));
+ 		}
+ 		break;
+-- 
+1.9.3
+

@@ -1,0 +1,38 @@
+From c51c17bc6fd7373b07cad6156af0809f703a1db0 Mon Sep 17 00:00:00 2001
+From: Daniel Kopecek <dkopecek@redhat.com>
+Date: Tue, 6 Jan 2015 16:23:14 +0100
+Subject: [PATCH] Set async thread cancelation before entering probe_main
+
+Set thread cancelation type to PTHREAD_CANCEL_ASYNCHRONOUS to prevent
+the code in probe_main to defer the cancelation for too long.
+
+Related: rhbz#1165139
+---
+ src/OVAL/probes/probe/worker.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/OVAL/probes/probe/worker.c b/src/OVAL/probes/probe/worker.c
+index 949d65f..f9c9f17 100644
+--- a/src/OVAL/probes/probe/worker.c
++++ b/src/OVAL/probes/probe/worker.c
+@@ -939,10 +939,16 @@ SEXP_t *probe_worker(probe_t *probe, SEAP_msg_t *msg_in, int *ret)
+ 			
+                         pctx.probe_in  = probe_in;
+                         pctx.probe_out = probe_out;
++
+                         /*
+-                         * Run the main function of the probe implementation
++                         * Run the main function of the probe implementation. Set thread
++			 * cancelation type to ASYNC to prevent the code in probe_main to
++			 * defer the cancelation for too long.
+                          */
++			int __unused_oldstate;
++			pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &__unused_oldstate);
+ 			*ret = probe_main(&pctx, probe->probe_arg);
++			pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &__unused_oldstate);
+ 
+                         /*
+                          * Synchronize
+-- 
+1.9.3
+

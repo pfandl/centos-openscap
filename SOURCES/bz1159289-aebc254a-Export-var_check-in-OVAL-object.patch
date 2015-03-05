@@ -1,0 +1,31 @@
+From aebc254a4e6993ef79a549c2f71b5a6a4eb3ed01 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Mon, 3 Nov 2014 19:49:06 +0100
+Subject: [PATCH] Export var_check in OVAL object when var_ref is present
+
+Fixes validation issues with schematron, such as:
+
+oval:mil.disa.fso.redhat.rhel6:obj:3184 - a var_ref has been supplied for the
+ind-def:pattern entity so a var_check should also be provided
+---
+ src/OVAL/oval_objectContent.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/OVAL/oval_objectContent.c b/src/OVAL/oval_objectContent.c
+index ee59e86..eb59c25 100644
+--- a/src/OVAL/oval_objectContent.c
++++ b/src/OVAL/oval_objectContent.c
+@@ -403,7 +403,9 @@ xmlNode *oval_object_content_to_dom(struct oval_object_content *content, xmlDoc
+ 			struct oval_entity *entity = oval_object_content_get_entity(content);
+ 			content_node = oval_entity_to_dom(entity, doc, parent);
+ 			oval_check_t check = oval_object_content_get_varCheck(content);
+-			if (check != OVAL_CHECK_ALL)
++			oval_entity_varref_type_t vtype = oval_entity_get_varref_type(entity);
++
++			if (check != OVAL_CHECK_ALL || vtype != OVAL_ENTITY_VARREF_NONE)
+ 				xmlNewProp(content_node, BAD_CAST "var_check", BAD_CAST oval_check_get_text(check));
+ 		}
+ 		break;
+-- 
+1.9.3
+

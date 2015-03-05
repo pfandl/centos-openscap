@@ -5,13 +5,16 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.0.3
-Release:        2%{?dist}
+Version:        1.1.1
+Release:        3%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
+Patch0:         bz1159289-aebc254a-Export-var_check-in-OVAL-object.patch
+Patch1:         bz1165139-c51c17bc-Set-async-thread-cancelation.patch
+Patch2:         bz1182242-0e3c7e68-Export-var_check-together.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -53,18 +56,30 @@ BuildRequires:  python-devel
 The %{name}-python package contains the bindings so that %{name}
 libraries can be used by python.
 
-%package        utils
-Summary:        Openscap utilities
+%package        scanner
+Summary:        OpenSCAP Scanner Tool (oscap)
 Group:          Applications/System
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       libcurl >= 7.12.0
-Requires:       rpmdevtools rpm-build
 BuildRequires:  libcurl-devel >= 7.12.0
 
-%description    utils
-The %{name}-utils package contains oscap command-line tool. The oscap
+%description    scanner
+The %{name}-scanner package contains oscap command-line tool. The oscap
 is configuration and vulnerability scanner, capable of performing
 compliance checking using SCAP content.
+
+%package        utils
+Summary:        OpenSCAP Utilities
+Group:          Applications/System
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       rpmdevtools rpm-build
+Requires:       %{name}-scanner%{?_isa} = %{version}-%{release}
+
+%description    utils
+The %{name}-utils package contains command-line tools build on top
+of OpenSCAP library. Historically, openscap-utils included oscap
+tool which is now separated to %{name}-scanner sub-package.
+
 
 %package        extra-probes
 Summary:        SCAP probes
@@ -114,6 +129,9 @@ This package installs and sets up the  SELinux policy security module for opensc
 
 %prep
 %setup -q
+%patch0 -p1 -b .bz1159289
+%patch1 -p1 -b .bz1165139
+%patch2 -p1 -b .bz1182242
 
 %build
 %ifarch sparc64
@@ -214,6 +232,8 @@ exit 0
 %{_libexecdir}/openscap/probe_shadow
 %{_libexecdir}/openscap/probe_sysctl
 %{_libexecdir}/openscap/probe_system_info
+%{_libexecdir}/openscap/probe_systemdunitdependency
+%{_libexecdir}/openscap/probe_systemdunitproperty
 %{_libexecdir}/openscap/probe_textfilecontent
 %{_libexecdir}/openscap/probe_textfilecontent54
 %{_libexecdir}/openscap/probe_uname
@@ -245,12 +265,19 @@ exit 0
 %{_libdir}/libopenscap_sce.so
 %{_includedir}/openscap/sce_engine_api.h
 
+%files scanner
+%{_mandir}/man8/oscap.8.gz
+%{_bindir}/oscap
+%{_sysconfdir}/bash_completion.d
+
 %files utils
 %defattr(-,root,root,-)
 %doc docs/oscap-scan.cron
 %{_mandir}/man8/*
+%exclude %{_mandir}/man8/oscap.8.gz
 %{_bindir}/*
-%{_sysconfdir}/bash_completion.d
+%exclude %{_bindir}/oscap
+
 
 %files extra-probes
 %{_libexecdir}/openscap/probe_ldap57
@@ -265,6 +292,20 @@ exit 0
 # %{_mandir}/man8/openscap_selinux.8.*
 
 %changelog
+* Tue Jan 20 2015 Šimon Lukašík <slukasik@redhat.com> - 1.1.1-3
+- USGCB, schematron: var_ref missing when var_check exported (#1182242)
+
+* Thu Jan 08 2015 Šimon Lukašík <slukasik@redhat.com> - 1.1.1-2
+- STIG-generated results contain var_ref without var_check (#1159289)
+- Probes failed to stop by USR1 signal as specified (#1165139)
+
+* Fri Sep 26 2014 Šimon Lukašík <slukasik@redhat.com> - 1.1.1-1
+- upgrade to the latest upstream release
+
+* Wed Sep 03 2014 Šimon Lukašík <slukasik@redhat.com> - 1.1.0-1
+- upgrade
+- introduce openscap-scanner sub-package (#1115105)
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 1.0.3-2
 - Mass rebuild 2014-01-24
 
