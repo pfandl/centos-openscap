@@ -5,16 +5,15 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.1.1
+Version:        1.2.5
 Release:        3%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
-Patch0:         bz1159289-aebc254a-Export-var_check-in-OVAL-object.patch
-Patch1:         bz1165139-c51c17bc-Set-async-thread-cancelation.patch
-Patch2:         bz1182242-0e3c7e68-Export-var_check-together.patch
+Patch0:         openscap-1.2.5-rhsa-idents.patch
+Patch1:         openscap-1.2.5-scap-as-rpm-srpm.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -23,6 +22,7 @@ BuildRequires:  pcre-devel
 BuildRequires:  libacl-devel
 BuildRequires:  libselinux-devel libcap-devel
 BuildRequires:  libblkid-devel
+BuildRequires:  bzip2-devel
 %if %{?_with_check:1}%{!?_with_check:0}
 BuildRequires:  perl-XML-XPath
 %endif
@@ -62,6 +62,7 @@ Group:          Applications/System
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       libcurl >= 7.12.0
 BuildRequires:  libcurl-devel >= 7.12.0
+Obsoletes:      openscap-selinux
 
 %description    scanner
 The %{name}-scanner package contains oscap command-line tool. The oscap
@@ -114,24 +115,10 @@ Requires:       pkgconfig
 The %{name}-engine-sce-devel package contains libraries and header files
 for developing applications that use %{name}-engine-sce.
 
-%package        selinux
-Summary:        SELinux policy module for openscap
-Group:          System Environment/Base
-Requires:       %{name}-utils = %{version}-%{release}
-Requires:       policycoreutils, libselinux-utils
-Requires(post): selinux-policy-base, policycoreutils
-Requires(postun): policycoreutils
-BuildRequires:  selinux-policy-devel
-BuildArch:      noarch
-
-%description    selinux
-This package installs and sets up the  SELinux policy security module for openscap.
-
 %prep
 %setup -q
-%patch0 -p1 -b .bz1159289
-%patch1 -p1 -b .bz1165139
-%patch2 -p1 -b .bz1182242
+%patch0 -p1
+%patch1 -p1
 
 %build
 %ifarch sparc64
@@ -143,7 +130,7 @@ export CFLAGS="$RPM_OPT_FLAGS -fpie"
 export LDFLAGS="-pie -Wl,-z,relro -Wl,-z,now"
 %endif
 
-%configure --enable-sce --enable-selinux_policy
+%configure --enable-sce
 
 make %{?_smp_mflags}
 # Remove shebang from bash-completion script
@@ -182,29 +169,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %post -p /sbin/ldconfig
 
-%post selinux
-semodule -n -i %{_datadir}/selinux/packages/oscap.pp
-if /usr/sbin/selinuxenabled ; then
-    /usr/sbin/load_policy
-    %relabel_files
-fi;
-exit 0
-
 %postun -p /sbin/ldconfig
-
-%postun selinux
-if [ $1 -eq 0 ]; then
-    semodule -n -r oscap
-    if /usr/sbin/selinuxenabled ; then
-       /usr/sbin/load_policy
-       %relabel_files
-    fi;
-fi;
-exit 0
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS COPYING ChangeLog NEWS README
+%doc AUTHORS COPYING ChangeLog NEWS README.md
 %{_libdir}/libopenscap.so.*
 %{_libexecdir}/openscap/probe_dnscache
 %{_libexecdir}/openscap/probe_environmentvariable
@@ -230,6 +199,7 @@ exit 0
 %{_libexecdir}/openscap/probe_selinuxboolean
 %{_libexecdir}/openscap/probe_selinuxsecuritycontext
 %{_libexecdir}/openscap/probe_shadow
+%{_libexecdir}/openscap/probe_symlink
 %{_libexecdir}/openscap/probe_sysctl
 %{_libexecdir}/openscap/probe_system_info
 %{_libexecdir}/openscap/probe_systemdunitdependency
@@ -286,12 +256,20 @@ exit 0
 %files engine-sce
 %{_libdir}/libopenscap_sce.so.*
 
-%files selinux
-%attr(0600,root,root) %{_datadir}/selinux/packages/oscap.pp
-%{_datadir}/selinux/devel/include/contrib/oscap.if
-# %{_mandir}/man8/openscap_selinux.8.*
-
 %changelog
+* Fri Jul 24 2015 Martin Preisler <mpreisle@redhat.com> - 1.2.5-3
+- add a patch for scap-as-rpm to generate SRPM correctly (#1242893)
+
+* Fri Jul 24 2015 Martin Preisler <mpreisle@redhat.com> - 1.2.5-2
+- add a patch to support RHSA identifiers in HTML report and guide (#1243808)
+
+* Mon Jul 06 2015 Šimon Lukašík <slukasik@redhat.com> - 1.2.5-1
+- upgrade to the latest upstream release
+
+* Mon Jun 22 2015 Šimon Lukašík <slukasik@redhat.com> - 1.2.4-1
+- upgrade to the latest upstream release
+- drop openscap-selinux sub-package
+
 * Tue Jan 20 2015 Šimon Lukašík <slukasik@redhat.com> - 1.1.1-3
 - USGCB, schematron: var_ref missing when var_check exported (#1182242)
 
