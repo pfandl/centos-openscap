@@ -5,15 +5,14 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.2.5
-Release:        3%{?dist}
+Version:        1.2.9
+Release:        5%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
-Patch0:         openscap-1.2.5-rhsa-idents.patch
-Patch1:         openscap-1.2.5-scap-as-rpm-srpm.patch
+Patch1:         openscap-1.2.9-oscap-docker-argparse.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -117,7 +116,6 @@ for developing applications that use %{name}-engine-sce.
 
 %prep
 %setup -q
-%patch0 -p1
 %patch1 -p1
 
 %build
@@ -247,6 +245,7 @@ rm -rf $RPM_BUILD_ROOT
 %exclude %{_mandir}/man8/oscap.8.gz
 %{_bindir}/*
 %exclude %{_bindir}/oscap
+%{python_sitelib}/oscap_docker_python/*
 
 
 %files extra-probes
@@ -257,6 +256,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
+* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-5
+- changed spec Release to avoid conflicts
+
+* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-3
+- worked around a change in behavior in argparse between different versions of python2 (#1278147)
+
+* Tue Apr 26 2016 Jan Černý <jcerny@redhat.com> - 1.2.9-2
+- fix specfile
+
+* Mon Apr 25 2016 Jan Černý <jcerny@redhat.com> - 1.2.9-1
+- upgrade to the latest upstream release
+
 * Fri Jul 24 2015 Martin Preisler <mpreisle@redhat.com> - 1.2.5-3
 - add a patch for scap-as-rpm to generate SRPM correctly (#1242893)
 
