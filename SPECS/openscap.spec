@@ -5,14 +5,14 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.2.9
-Release:        5%{?dist}
+Version:        1.2.10
+Release:        2%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
-Patch1:         openscap-1.2.9-oscap-docker-argparse.patch
+Patch1:         openscap-1.2.10-oscap-docker-urllib.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -256,11 +256,21 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
-* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-5
-- changed spec Release to avoid conflicts
+* Mon Sep 05 2016 Jan Černý <jcerny@redhat.com> - 1.2.10-2
+- fix oscap-docker to follow the proxy settings (#1351952)
 
-* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-3
+* Thu Jun 30 2016 Jan Černý - 1.2.10-1
+- upgrade to the latest upstream release
+
+* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-7
+- fixed dates in the changlog
+- changed Release to 7 to avoid conflicts
+
+* Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-4
 - worked around a change in behavior in argparse between different versions of python2 (#1278147)
+
+* Thu May 05 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-3
+- fixed loading SDS session multiple times (#1250072)
 
 * Tue Apr 26 2016 Jan Černý <jcerny@redhat.com> - 1.2.9-2
 - fix specfile
