@@ -6,13 +6,14 @@ restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
 Version:        1.2.10
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
 Patch1:         openscap-1.2.10-oscap-docker-urllib.patch
+Patch2:         openscap-1.2.12-oscap-docker-incompliance.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -117,6 +118,7 @@ for developing applications that use %{name}-engine-sce.
 %prep
 %setup -q
 %patch1 -p1
+%patch2 -p1
 
 %build
 %ifarch sparc64
@@ -256,6 +258,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
+* Thu Jan 05 2017 Raphael Sanchez Prudencio <rsprudencio@redhat.com> - 1.2.10-3
+- fix oscap-docker bug that incorrectly informs about incompliance of the assessed system (#1410409)
+
 * Mon Sep 05 2016 Jan Černý <jcerny@redhat.com> - 1.2.10-2
 - fix oscap-docker to follow the proxy settings (#1351952)
 
