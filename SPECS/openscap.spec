@@ -5,15 +5,17 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.2.10
-Release:        3%{?dist}
+Version:        1.2.14
+Release:        2%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
-Patch1:         openscap-1.2.10-oscap-docker-urllib.patch
-Patch2:         openscap-1.2.12-oscap-docker-incompliance.patch
+Patch0:         openscap-1.2.14-rpm-probes-not-applicable-PR-733.patch
+Patch1:         openscap-1.2.14-sysctl-test-s390x-PR-726.patch
+# We are reverting the patch below, not applying it! The patch has been modified to remove line count changes, we got rid of line count checking in 1.2.14
+Patch2:         openscap-1.2.14-warning-by-default-PR-630.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -117,8 +119,9 @@ for developing applications that use %{name}-engine-sce.
 
 %prep
 %setup -q
+%patch0 -p1
 %patch1 -p1
-%patch2 -p1
+%patch2 -p1 -R
 
 %build
 %ifarch sparc64
@@ -258,17 +261,53 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
-* Thu Jan 05 2017 Raphael Sanchez Prudencio <rsprudencio@redhat.com> - 1.2.10-3
-- fix oscap-docker bug that incorrectly informs about incompliance of the assessed system (#1410409)
+* Fri May 19 2017 Martin Preisler <mpreisle@redhat.com> - 1.2.14-2
+- RPM probes to return not applicable on non-rpm systems (#1447629)
+- fixed sysctl tests on s390x architecture (#1447649)
+- Revert warning by default in oscap tool, our message categories are not ready for it (#1447341)
+
+* Tue Mar 21 2017 Jan Černý <jcerny@redhat.com> - 1.2.14-1
+- Upgrade to the latest upstream release
+- Detailed information about ARF files in 'oscap info'
+- Generating remediation scripts from ARF
+- HTML report UX improvements
+- Fixed CPE dictionary to identify RHEVH as RHEL7 (#1420038)
+- Fixed systemd probes crashes inside containers (#1431186)
+- Fixed output on terminals with white background (#1365911)
+- Error handling in oscap-vm (#1391754)
+- Fixed SCE stderr stalling (#1420811)
+- Fixed absolute filepath parsing in OVAL (#1312831, #1312824)
+- Fixed segmentation faults in RPM probes (#1414303, #1414312)
+- Fixed missing header in result-oriented Ansible remediations
+
+* Thu Jan 05 2017 Martin Preisler <mpreisle@redhat.com> - 1.2.13-1
+- Upgrade to the latest upstream release
+- Added --thin-results CLI override to oscap xccdf eval
+- Added --without-syschar CLI override to oscap xccdf eval
+- Remediations are not filtered by applicability
+- Fixed segmentation faults in XCCDF and OVAL processing
+- Added a warning on generating an ARF from XCCDF 1.1
+
+* Wed Nov 16 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.12-1
+- Upgrade to the latest upstream release
+- improved HTML report by referencing links
+- fixed validity errors in ARF files
+- fixed CVE parsing
+- fixed injecting xccdf:check-content-ref references in ARF results
+- fixed oscap-docker incompliance reporting (#1387248)
+- fixed oscap-docker man page (#1387166)
+
+* Mon Nov 14 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.11-1
+- upgrade to the latest upstream release
 
 * Mon Sep 05 2016 Jan Černý <jcerny@redhat.com> - 1.2.10-2
 - fix oscap-docker to follow the proxy settings (#1351952)
 
-* Thu Jun 30 2016 Jan Černý - 1.2.10-1
+* Thu Jun 30 2016 Jan Černý <jcerny@redhat.com> - 1.2.10-1
 - upgrade to the latest upstream release
 
 * Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-7
-- fixed dates in the changlog
+- fixed dates in the changelog
 - changed Release to 7 to avoid conflicts
 
 * Tue May 31 2016 Martin Preisler <mpreisle@redhat.com> - 1.2.9-4

@@ -1,0 +1,281 @@
+From bb66711ed1151a5dfaa52a9ba4ad3658bdf546f7 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 4 Jan 2017 16:41:31 -0500
+Subject: [PATCH 1/9] Make WARNING the default verbosity level
+
+---
+ src/common/debug.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/common/debug.c b/src/common/debug.c
+index bbcad4583..71d345a9d 100644
+--- a/src/common/debug.c
++++ b/src/common/debug.c
+@@ -85,7 +85,7 @@ oscap_verbosity_levels oscap_verbosity_level_from_cstr(const char *level_name)
+ bool oscap_set_verbose(const char *verbosity_level, const char *filename, bool is_probe)
+ {
+ 	if (verbosity_level == NULL) {
+-		return true;
++		verbosity_level = "WARNING";
+ 	}
+ 	__debuglog_level = oscap_verbosity_level_from_cstr(verbosity_level);
+ 	if (__debuglog_level == DBG_UNKNOWN) {
+
+From 54d66d5db6ab4e3fc24c05e239b7a4c474e3b20e Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 1 Feb 2017 13:24:47 -0500
+Subject: [PATCH 3/9] Changed a warning about parsing without benchmark
+ reference to info
+
+It's not a serious warning and in many use-cases is expected.
+---
+ src/XCCDF/tailoring.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/XCCDF/tailoring.c b/src/XCCDF/tailoring.c
+index dd2379e5f..4fe9e5d88 100644
+--- a/src/XCCDF/tailoring.c
++++ b/src/XCCDF/tailoring.c
+@@ -187,7 +187,7 @@ struct xccdf_tailoring *xccdf_tailoring_parse(xmlTextReaderPtr reader, struct xc
+ 		}
+ 		case XCCDFE_PROFILE: {
+ 			if (benchmark != NULL) {
+-				dW("Parsing Tailoring Profiles without reference to Benchmark");
++				dI("Parsing Tailoring Profiles without reference to Benchmark");
+ 			}
+ 			struct xccdf_item *item = xccdf_profile_parse(reader, benchmark);
+ 			if (!xccdf_tailoring_add_profile(tailoring, XPROFILE(item))) {
+
+From 3ef6685ae05007f7328b9284c0fcb22732b38f00 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 1 Feb 2017 14:00:54 -0500
+Subject: [PATCH 4/9] Filter expected permission errors from stderr in
+ test_sysctl_probe_all.sh
+
+---
+ tests/probes/sysctl/test_sysctl_probe_all.sh | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tests/probes/sysctl/test_sysctl_probe_all.sh b/tests/probes/sysctl/test_sysctl_probe_all.sh
+index 1b725231d..8e763ac37 100755
+--- a/tests/probes/sysctl/test_sysctl_probe_all.sh
++++ b/tests/probes/sysctl/test_sysctl_probe_all.sh
+@@ -28,6 +28,8 @@ grep unix-sys:name "$result" | sed -E 's;.*>(.*)<.*;\1;g' | sort > "$ourNames"
+ 
+ diff "$sysctlNames" "$ourNames"
+ 
++# remove oscap error message related to permissions from stderr
++sed -i -E "/^E: lt-probe_sysctl: Can't read sysctl value from /d" "$stderr"
+ [ ! -s $stderr ]
+ 
+ rm $stderr $result $ourNames $sysctlNames
+
+From 789486ee35410af0fc5739e2d68436470f2b3006 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 1 Feb 2017 14:51:34 -0500
+Subject: [PATCH 5/9] Filter out the expected error in sql57 probe test
+
+---
+ tests/probes/sql57/unsupported_engine.sh | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tests/probes/sql57/unsupported_engine.sh b/tests/probes/sql57/unsupported_engine.sh
+index f90d6c8b7..6243cff35 100755
+--- a/tests/probes/sql57/unsupported_engine.sh
++++ b/tests/probes/sql57/unsupported_engine.sh
+@@ -10,6 +10,8 @@ echo "stderr file: $stderr"
+ 
+ echo "Evaluating content."
+ $OSCAP oval eval --results $result $srcdir/${name}.oval.xml 2> $stderr
++# filter out the expected error in stderr
++sed -i -E "/^E: lt-probe_sql57: DB engine not supported: sqlserver/d" "$stderr"
+ [ -f $stderr ]; [ ! -s $stderr ]; rm $stderr
+ echo "Validating results."
+ #$OSCAP oval validate-xml --results --schematron $result
+
+From cdff2e8504c19f473cbe3b1c64f56b99f13106af Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 8 Feb 2017 15:04:17 -0500
+Subject: [PATCH 6/9] Do not output errors if check engine plugin auto-loading
+ fails
+
+If SCE is not installed it will fail in an expected way and it makes no
+sense to clutter the error log with it. Explicit plugin loading via the
+API will still fail with errors.
+---
+ src/XCCDF/public/xccdf_session.h              |  3 +++
+ src/XCCDF/xccdf_session.c                     | 11 ++++++++---
+ src/XCCDF_POLICY/check_engine_plugin.c        | 26 +++++++++++++++++---------
+ src/XCCDF_POLICY/public/check_engine_plugin.h |  1 +
+ utils/oscap.c                                 |  3 ++-
+ 5 files changed, 31 insertions(+), 13 deletions(-)
+
+diff --git a/src/XCCDF/public/xccdf_session.h b/src/XCCDF/public/xccdf_session.h
+index e1473aebe..2f1bf87c1 100644
+--- a/src/XCCDF/public/xccdf_session.h
++++ b/src/XCCDF/public/xccdf_session.h
+@@ -358,8 +358,11 @@ int xccdf_session_load_oval(struct xccdf_session *session);
+  *
+  * @memberof xccdf_session
+  * @param session XCCDF Session
++ * @param plugin_name Name of the plugin to load
++ * @param quiet If true we will not output errors if loading fails
+  * @returns zero on success
+  */
++int xccdf_session_load_check_engine_plugin2(struct xccdf_session *session, const char* plugin_name, bool quiet);
+ int xccdf_session_load_check_engine_plugin(struct xccdf_session *session, const char* plugin_name);
+ 
+ /**
+diff --git a/src/XCCDF/xccdf_session.c b/src/XCCDF/xccdf_session.c
+index 3474e265e..60ea38bae 100644
+--- a/src/XCCDF/xccdf_session.c
++++ b/src/XCCDF/xccdf_session.c
+@@ -945,9 +945,9 @@ int xccdf_session_load_oval(struct xccdf_session *session)
+ 	return 0;
+ }
+ 
+-int xccdf_session_load_check_engine_plugin(struct xccdf_session *session, const char *plugin_name)
++int xccdf_session_load_check_engine_plugin2(struct xccdf_session *session, const char *plugin_name, bool quiet)
+ {
+-	struct check_engine_plugin_def *plugin = check_engine_plugin_load(plugin_name);
++	struct check_engine_plugin_def *plugin = check_engine_plugin_load2(plugin_name, quiet);
+ 
+ 	if (!plugin)
+ 		return -1; // error already set
+@@ -964,6 +964,11 @@ int xccdf_session_load_check_engine_plugin(struct xccdf_session *session, const
+ 	}
+ }
+ 
++int xccdf_session_load_check_engine_plugin(struct xccdf_session *session, const char *plugin_name)
++{
++	return xccdf_session_load_check_engine_plugin2(session, plugin_name, false);
++}
++
+ int xccdf_session_load_check_engine_plugins(struct xccdf_session *session)
+ {
+ 	xccdf_session_unload_check_engine_plugins(session);
+@@ -973,7 +978,7 @@ int xccdf_session_load_check_engine_plugins(struct xccdf_session *session)
+ 	while (*known_plugins) {
+ 		// We do not report failure when a known plugin doesn't load properly, that's because they
+ 		// are optional and we don't know if it's not there or if it just failed to load.
+-		if (xccdf_session_load_check_engine_plugin(session, *known_plugins) != 0)
++		if (xccdf_session_load_check_engine_plugin2(session, *known_plugins, true) != 0)
+ 			oscap_clearerr();
+ 
+ 		known_plugins++;
+diff --git a/src/XCCDF_POLICY/check_engine_plugin.c b/src/XCCDF_POLICY/check_engine_plugin.c
+index af9791a46..ea9e821b6 100644
+--- a/src/XCCDF_POLICY/check_engine_plugin.c
++++ b/src/XCCDF_POLICY/check_engine_plugin.c
+@@ -47,7 +47,7 @@ static void check_engine_plugin_def_free(struct check_engine_plugin_def *plugin)
+ 	oscap_free(plugin);
+ }
+ 
+-struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
++struct check_engine_plugin_def *check_engine_plugin_load2(const char* path, bool quiet)
+ {
+ 	struct check_engine_plugin_def *ret = check_engine_plugin_def_new();
+ 
+@@ -61,9 +61,10 @@ struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
+ 	if (!ret->module_handle) {
+ 		error = dlerror();
+ 
+-		oscap_seterr(OSCAP_EFAMILY_GLIBC,
+-			"Failed to load extra check engine from '%s'. Details: '%s'.",
+-			path, error);
++		if (!quiet)
++			oscap_seterr(OSCAP_EFAMILY_GLIBC,
++				"Failed to load extra check engine from '%s'. Details: '%s'.",
++				path, error);
+ 
+ 		check_engine_plugin_def_free(ret);
+ 		return NULL;
+@@ -73,9 +74,10 @@ struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
+ 	*(void **)(&entry_fn) = dlsym(ret->module_handle, STRINGIZE(OPENSCAP_CHECK_ENGINE_PLUGIN_ENTRY));
+ 
+ 	if ((error = dlerror()) != NULL) {
+-		oscap_seterr(OSCAP_EFAMILY_GLIBC,
+-			"Failed to retrieve module entry '%s' from loaded extra check engine '%s'. Details: '%s'.",
+-			STRINGIZE(OPENSCAP_CHECK_ENGINE_PLUGIN_ENTRY), path, error);
++		if (!quiet)
++			oscap_seterr(OSCAP_EFAMILY_GLIBC,
++				"Failed to retrieve module entry '%s' from loaded extra check engine '%s'. Details: '%s'.",
++				STRINGIZE(OPENSCAP_CHECK_ENGINE_PLUGIN_ENTRY), path, error);
+ 
+ 		dlclose(ret->module_handle);
+ 		check_engine_plugin_def_free(ret);
+@@ -83,8 +85,9 @@ struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
+ 	}
+ 
+ 	if ((*entry_fn)(ret) != 0) {
+-		oscap_seterr(OSCAP_EFAMILY_GLIBC,
+-			"Failed to fill check_engine_plugin_def when loading check engine plugin '%s'.", path);
++		if (!quiet)
++			oscap_seterr(OSCAP_EFAMILY_GLIBC,
++				"Failed to fill check_engine_plugin_def when loading check engine plugin '%s'.", path);
+ 
+ 		dlclose(ret->module_handle);
+ 		check_engine_plugin_def_free(ret);
+@@ -94,6 +97,11 @@ struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
+ 	return ret;
+ }
+ 
++struct check_engine_plugin_def *check_engine_plugin_load(const char* path)
++{
++	return check_engine_plugin_load2(path, false);
++}
++
+ void check_engine_plugin_unload(struct check_engine_plugin_def *plugin)
+ {
+ 	if (!plugin->module_handle) {
+diff --git a/src/XCCDF_POLICY/public/check_engine_plugin.h b/src/XCCDF_POLICY/public/check_engine_plugin.h
+index 7878fe07f..4a992ae34 100644
+--- a/src/XCCDF_POLICY/public/check_engine_plugin.h
++++ b/src/XCCDF_POLICY/public/check_engine_plugin.h
+@@ -52,6 +52,7 @@ struct check_engine_plugin_def
+ 	const char *(*get_capabilities_fn)(void**);
+ };
+ 
++struct check_engine_plugin_def *check_engine_plugin_load2(const char* path, bool quiet);
+ struct check_engine_plugin_def *check_engine_plugin_load(const char* path);
+ void check_engine_plugin_unload(struct check_engine_plugin_def *plugin);
+ 
+diff --git a/utils/oscap.c b/utils/oscap.c
+index 7396101a8..1e966540c 100644
+--- a/utils/oscap.c
++++ b/utils/oscap.c
+@@ -126,7 +126,8 @@ static int print_versions(const struct oscap_action *action)
+ 	const char * const *known_plugins = check_engine_plugin_get_known_plugins();
+ 	bool known_plugin_found = false;
+ 	while (*known_plugins) {
+-		struct check_engine_plugin_def *plugin = check_engine_plugin_load(*known_plugins);
++		// try to load the plugin but output no errors if it fails (quiet=true)
++		struct check_engine_plugin_def *plugin = check_engine_plugin_load2(*known_plugins, true);
+ 		if (plugin) {
+ 			printf("%s (from %s)\n", check_engine_plugin_get_capabilities(plugin), *known_plugins);
+ 			check_engine_plugin_unload(plugin);
+
+From 703c1045aedf1f826f007a01cf8b387b525c1d55 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Thu, 9 Feb 2017 13:54:53 -0500
+Subject: [PATCH 7/9] Filter out the expected warning in
+ test_remediation_subs_unresolved
+
+---
+ tests/API/XCCDF/unittests/test_remediation_subs_unresolved.sh | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tests/API/XCCDF/unittests/test_remediation_subs_unresolved.sh b/tests/API/XCCDF/unittests/test_remediation_subs_unresolved.sh
+index f48239d93..44ae2f772 100755
+--- a/tests/API/XCCDF/unittests/test_remediation_subs_unresolved.sh
++++ b/tests/API/XCCDF/unittests/test_remediation_subs_unresolved.sh
+@@ -35,6 +35,8 @@ assert_exists 1 '//score[text()="0.000000"]'
+ ret=0
+ $OSCAP xccdf eval --remediate --results $result $srcdir/${name}.xccdf.xml 2> $stderr || ret=$?
+ [ $ret -eq 2 ]
++# filter out the expected warning in stderr
++sed -i -E "/^W: oscap: The xccdf:rule-result\/xccdf:instance element was not found./d" "$stderr"
+ [ -f $stderr ]; [ ! -s $stderr ]; rm $stderr
+ 
+ $OSCAP xccdf validate-xml $result
+
