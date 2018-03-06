@@ -6,7 +6,7 @@ restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
 Version:        1.2.14
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
@@ -16,6 +16,7 @@ Patch0:         openscap-1.2.14-rpm-probes-not-applicable-PR-733.patch
 Patch1:         openscap-1.2.14-sysctl-test-s390x-PR-726.patch
 # We are reverting the patch below, not applying it! The patch has been modified to remove line count changes, we got rid of line count checking in 1.2.14
 Patch2:         openscap-1.2.14-warning-by-default-PR-630.patch
+Patch3:         openscap-1.2.15-use-checklist-id-to-get-html-guide-PR-745.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -122,6 +123,7 @@ for developing applications that use %{name}-engine-sce.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1 -R
+%patch3 -p1
 
 %build
 %ifarch sparc64
@@ -261,6 +263,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
+* Wed Feb 21 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.14-3
+- Use checklist ID instead of hardcoded value to get HTML guide (#1545584)
+
 * Fri May 19 2017 Martin Preisler <mpreisle@redhat.com> - 1.2.14-2
 - RPM probes to return not applicable on non-rpm systems (#1447629)
 - fixed sysctl tests on s390x architecture (#1447649)
