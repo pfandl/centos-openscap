@@ -1,0 +1,473 @@
+From 61fef6cc090b097141cd45c1f783c4fe6b89efc5 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 12:39:07 +0200
+Subject: [PATCH 1/9] Change rpmverifyfile error when init fails
+
+When rpmverifyfile probe_init() fails it is because RPM config files
+were not found, and we expect "not applicable" in this case.
+---
+ src/OVAL/probes/unix/linux/rpmverifyfile.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverifyfile.c b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+index 0897b82c4..f0febdee9 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifyfile.c
++++ b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+@@ -435,11 +435,10 @@ int probe_main (probe_ctx *ctx, void *arg)
+ 	uint64_t collect_flags = 0;
+ 	unsigned int i;
+ 
++	/*
++	 * If probe_init() failed it's because there was no rpm config files
++	 */
+ 	if (arg == NULL) {
+-		return PROBE_EINIT;
+-	}
+-
+-	if (g_rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+ 	}
+
+From 71f41d635142297e299cc4877bd93ea896271e70 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 12:42:26 +0200
+Subject: [PATCH 2/9] Fix rpmverifyfile probe fini when init fails
+
+When rpmverifyfile probe_init() fails g_rpm->rpmts and g_rpm->mutex are
+not initialized
+---
+ src/OVAL/probes/unix/linux/rpmverifyfile.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverifyfile.c b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+index f0febdee9..968bb3807 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifyfile.c
++++ b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+@@ -330,11 +330,18 @@ void probe_fini (void *ptr)
+ {
+ 	struct rpm_probe_global *r = (struct rpm_probe_global *)ptr;
+ 
+-	rpmtsFree(r->rpmts);
+ 	rpmFreeCrypto();
+ 	rpmFreeRpmrc();
+ 	rpmFreeMacros(NULL);
+ 	rpmlogClose();
++
++	/*
++	 * If probe_init() failed r->rpmts and r->mutex were not initialized
++	 */
++	if (r == NULL)
++		return;
++
++	rpmtsFree(r->rpmts);
+ 	pthread_mutex_destroy (&(r->mutex));
+ 
+ 	return;
+
+From 4912ee36b3230c2f431150750c78380d4e149621 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 12:48:00 +0200
+Subject: [PATCH 3/9] Change rpmverify error when init fails
+
+When rpmverify probe_init() fails it is because RPM config files
+were not found, and we expect "not applicable" in this case.
+---
+ src/OVAL/probes/unix/linux/rpmverify.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverify.c b/src/OVAL/probes/unix/linux/rpmverify.c
+index 5eb069d21..dd667a9f1 100644
+--- a/src/OVAL/probes/unix/linux/rpmverify.c
++++ b/src/OVAL/probes/unix/linux/rpmverify.c
+@@ -321,10 +321,10 @@ int probe_main (probe_ctx *ctx, void *arg)
+         uint64_t collect_flags = 0;
+         unsigned int i;
+ 
++	/*
++	 * If probe_init() failed it's because there was no rpm config files
++	 */
+ 	if (arg == NULL) {
+-		return PROBE_EINIT;
+-	}
+-	if (g_rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+ 	}
+
+From b9c3afd67b2f86644a08375aaee822b72c077149 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 12:49:04 +0200
+Subject: [PATCH 4/9] Fix rpmverify probe fini when init fails
+
+When rpmverify probe_init() fails g_rpm->rpmts and g_rpm->mutex are
+not initialized.
+---
+ src/OVAL/probes/unix/linux/rpmverify.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverify.c b/src/OVAL/probes/unix/linux/rpmverify.c
+index dd667a9f1..f1f32417e 100644
+--- a/src/OVAL/probes/unix/linux/rpmverify.c
++++ b/src/OVAL/probes/unix/linux/rpmverify.c
+@@ -246,12 +246,19 @@ void probe_fini (void *ptr)
+ {
+         struct rpm_probe_global *r = (struct rpm_probe_global *)ptr;
+ 
+-        rpmtsFree(r->rpmts);
+ 	rpmFreeCrypto();
+-        rpmFreeRpmrc();
+-        rpmFreeMacros(NULL);
+-        rpmlogClose();
+-        pthread_mutex_destroy (&(r->mutex));
++	rpmFreeRpmrc();
++	rpmFreeMacros(NULL);
++	rpmlogClose();
++
++	/*
++	 * If probe_init() failed r->rpmts and r->mutex were not initialized
++	 */
++	if (r == NULL)
++		return;
++
++	rpmtsFree(r->rpmts);
++	pthread_mutex_destroy (&(r->mutex));
+ 
+         return;
+ }
+
+From 20893b46b6a813326dcc7a60f1b888da14ead3ac Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 13:23:04 +0200
+Subject: [PATCH 5/9] Change rpminfo probe_init() fails
+
+rpminfo probe_init() can fail because regex compilation failed or
+because RPM config files were not found, return error in the first
+case and "not applicable" in the second.
+---
+ src/OVAL/probes/unix/linux/rpminfo.c | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpminfo.c b/src/OVAL/probes/unix/linux/rpminfo.c
+index f7f73a727..639030a52 100644
+--- a/src/OVAL/probes/unix/linux/rpminfo.c
++++ b/src/OVAL/probes/unix/linux/rpminfo.c
+@@ -275,19 +275,20 @@ void *probe_init (void)
+ #ifdef HAVE_RPM46
+ 	rpmlogSetCallback(rpmErrorCb, NULL);
+ #endif
+-        if (rpmReadConfigFiles ((const char *)NULL, (const char *)NULL) != 0) {
+-                dI("rpmReadConfigFiles failed: %u, %s.", errno, strerror (errno));
+-                return (NULL);
+-        }
+-
+-        g_rpm.rpmts = rpmtsCreate();
+-        pthread_mutex_init (&(g_rpm.mutex), NULL);
+-
+ 	if (regcomp(&g_keyid_regex, g_keyid_regex_string, REG_EXTENDED) != 0) {
+ 		dE("regcomp(%s) failed.");
+ 		return NULL;
+ 	}
+ 
++	if (rpmReadConfigFiles ((const char *)NULL, (const char *)NULL) != 0) {
++		dI("rpmReadConfigFiles failed: %u, %s.", errno, strerror (errno));
++		g_rpm.rpmts = NULL;
++		return ((void *)&g_rpm);
++        }
++
++        g_rpm.rpmts = rpmtsCreate();
++        pthread_mutex_init (&(g_rpm.mutex), NULL);
++
+         return ((void *)&g_rpm);
+ }
+ 
+@@ -378,9 +379,16 @@ int probe_main (probe_ctx *ctx, void *arg)
+         struct rpminfo_req request_st;
+         struct rpminfo_rep *reply_st;
+ 
++	/*
++	 * arg is NULL if regex compilation failed
++	 */
+ 	if (arg == NULL) {
+ 		return PROBE_EINIT;
+ 	}
++
++	/*
++	 * There was no rpm config files
++	 */
+ 	if (g_rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+
+From 070ec7e9029f8221163fd3f07e242c244d0b3b65 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 13:27:02 +0200
+Subject: [PATCH 6/9] Fix rpminfo probe fini when init fails
+
+When rpminfo probe_init() fails either the regex compilation failed
+or RPM config files were not found. The probe_fini() should handle each
+case differently.
+---
+ src/OVAL/probes/unix/linux/rpminfo.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpminfo.c b/src/OVAL/probes/unix/linux/rpminfo.c
+index 639030a52..28cba15e0 100644
+--- a/src/OVAL/probes/unix/linux/rpminfo.c
++++ b/src/OVAL/probes/unix/linux/rpminfo.c
+@@ -296,14 +296,22 @@ void probe_fini (void *ptr)
+ {
+         struct rpm_probe_global *r = (struct rpm_probe_global *)ptr;
+ 
+-        rpmtsFree(r->rpmts);
+ 	rpmFreeCrypto();
+-        rpmFreeRpmrc();
+-        rpmFreeMacros(NULL);
+-        rpmlogClose();
+-        pthread_mutex_destroy (&(r->mutex));
++	rpmFreeRpmrc();
++	rpmFreeMacros(NULL);
++	rpmlogClose();
++
++	if (r == NULL)
++		return;
++
+ 	regfree(&g_keyid_regex);
+ 
++	if (r->rpmts == NULL)
++		return;
++
++        rpmtsFree(r->rpmts);
++        pthread_mutex_destroy (&(r->mutex));
++
+         return;
+ }
+ 
+
+From 881461099ce42160079b9228c2080b072f1d4232 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 13:30:42 +0200
+Subject: [PATCH 7/9] Change rpmverifypackage probe_init() fails
+
+rpmverifypackage probe_init() can fail because chroot failed or
+because RPM config files were not found, return error in the first
+case and "not applicable" in the second.
+---
+ src/OVAL/probes/unix/linux/rpmverifypackage.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverifypackage.c b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+index 34d7255ca..15e0e0d89 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifypackage.c
++++ b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+@@ -336,7 +336,8 @@ void *probe_init (void)
+ 
+ 	if (rpmReadConfigFiles (NULL, (const char *)NULL) != 0) {
+ 		dI("rpmReadConfigFiles failed: %u, %s.", errno, strerror (errno));
+-		return (NULL);
++		g_rpm.rpm.rpmts = NULL;
++		return ((void *)&g_rpm);
+ 	}
+ 
+ 	g_rpm.rpm.rpmts = rpmtsCreate();
+@@ -417,10 +418,16 @@ int probe_main (probe_ctx *ctx, void *arg)
+ 	uint64_t collect_flags = 0;
+ 	unsigned int i;
+ 
++	/*
++	 * arg is NULL if we were not able to chroot during probe_init()
++	 */
+ 	if (arg == NULL) {
+ 		return PROBE_EINIT;
+ 	}
+ 
++	/*
++	 * There was no rpm config files
++	 */
+ 	if (g_rpm.rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+
+From 7d4bfce2966dec8b4c1ff44edfa473e17a6aeaec Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 5 May 2017 13:38:12 +0200
+Subject: [PATCH 8/9] Fix rpmverifypackage probe fini when init fails
+
+rpmverifypackage probe_init() can fail during chroot or because
+RPM config files were not found, return error in the first
+case and "not applicable" in the second.
+---
+ src/OVAL/probes/unix/linux/rpmverifypackage.c | 21 +++++++++++++++++++--
+ 1 file changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpmverifypackage.c b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+index 15e0e0d89..43c47e308 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifypackage.c
++++ b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+@@ -360,12 +360,29 @@ void probe_fini (void *ptr)
+ {
+ 	struct verifypackage_global *r = (struct verifypackage_global *)ptr;
+ 
+-	rpmtsFree(r->rpm.rpmts);
+-	probe_chroot_free(&(r->chr));
+ 	rpmFreeCrypto();
+ 	rpmFreeRpmrc();
+ 	rpmFreeMacros(NULL);
+ 	rpmlogClose();
++
++	/*
++	 * This will be always set by probe_init(), lets free it
++	 */
++	probe_chroot_free(&g_rpm.chr);
++
++	/*
++	 * If r is null, probe_init() failed during chroot
++	 */
++	if (r == NULL)
++		return;
++
++	/*
++	 * If r->rpm.rpmts was not initialized the mutex was not as well
++	 */
++	if (r->rpm.rpmts == NULL)
++		return;
++
++	rpmtsFree(r->rpm.rpmts);
+ 	pthread_mutex_destroy (&(r->rpm.mutex));
+ 
+ 	return;
+
+From 6fcc797c6f35b8ad72c9c6190e44f0bfa2b68673 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Fri, 12 May 2017 20:33:42 +0200
+Subject: [PATCH 9/9] Fix comment style
+
+---
+ src/OVAL/probes/unix/linux/rpminfo.c          |  8 ++------
+ src/OVAL/probes/unix/linux/rpmverify.c        |  8 ++------
+ src/OVAL/probes/unix/linux/rpmverifyfile.c    |  8 ++------
+ src/OVAL/probes/unix/linux/rpmverifypackage.c | 20 +++++---------------
+ 4 files changed, 11 insertions(+), 33 deletions(-)
+
+diff --git a/src/OVAL/probes/unix/linux/rpminfo.c b/src/OVAL/probes/unix/linux/rpminfo.c
+index 28cba15e0..602cf4c91 100644
+--- a/src/OVAL/probes/unix/linux/rpminfo.c
++++ b/src/OVAL/probes/unix/linux/rpminfo.c
+@@ -387,16 +387,12 @@ int probe_main (probe_ctx *ctx, void *arg)
+         struct rpminfo_req request_st;
+         struct rpminfo_rep *reply_st;
+ 
+-	/*
+-	 * arg is NULL if regex compilation failed
+-	 */
++	// arg is NULL if regex compilation failed
+ 	if (arg == NULL) {
+ 		return PROBE_EINIT;
+ 	}
+ 
+-	/*
+-	 * There was no rpm config files
+-	 */
++	// There was no rpm config files
+ 	if (g_rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+diff --git a/src/OVAL/probes/unix/linux/rpmverify.c b/src/OVAL/probes/unix/linux/rpmverify.c
+index f1f32417e..6ef7da574 100644
+--- a/src/OVAL/probes/unix/linux/rpmverify.c
++++ b/src/OVAL/probes/unix/linux/rpmverify.c
+@@ -251,9 +251,7 @@ void probe_fini (void *ptr)
+ 	rpmFreeMacros(NULL);
+ 	rpmlogClose();
+ 
+-	/*
+-	 * If probe_init() failed r->rpmts and r->mutex were not initialized
+-	 */
++	// If probe_init() failed r->rpmts and r->mutex were not initialized
+ 	if (r == NULL)
+ 		return;
+ 
+@@ -328,9 +326,7 @@ int probe_main (probe_ctx *ctx, void *arg)
+         uint64_t collect_flags = 0;
+         unsigned int i;
+ 
+-	/*
+-	 * If probe_init() failed it's because there was no rpm config files
+-	 */
++	// If probe_init() failed it's because there was no rpm config files
+ 	if (arg == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+diff --git a/src/OVAL/probes/unix/linux/rpmverifyfile.c b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+index 968bb3807..763c03c9f 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifyfile.c
++++ b/src/OVAL/probes/unix/linux/rpmverifyfile.c
+@@ -335,9 +335,7 @@ void probe_fini (void *ptr)
+ 	rpmFreeMacros(NULL);
+ 	rpmlogClose();
+ 
+-	/*
+-	 * If probe_init() failed r->rpmts and r->mutex were not initialized
+-	 */
++	// If probe_init() failed r->rpmts and r->mutex were not initialized
+ 	if (r == NULL)
+ 		return;
+ 
+@@ -442,9 +440,7 @@ int probe_main (probe_ctx *ctx, void *arg)
+ 	uint64_t collect_flags = 0;
+ 	unsigned int i;
+ 
+-	/*
+-	 * If probe_init() failed it's because there was no rpm config files
+-	 */
++	// If probe_init() failed it's because there was no rpm config files
+ 	if (arg == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
+diff --git a/src/OVAL/probes/unix/linux/rpmverifypackage.c b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+index 43c47e308..3c0dd5003 100644
+--- a/src/OVAL/probes/unix/linux/rpmverifypackage.c
++++ b/src/OVAL/probes/unix/linux/rpmverifypackage.c
+@@ -365,20 +365,14 @@ void probe_fini (void *ptr)
+ 	rpmFreeMacros(NULL);
+ 	rpmlogClose();
+ 
+-	/*
+-	 * This will be always set by probe_init(), lets free it
+-	 */
++	// This will be always set by probe_init(), lets free it
+ 	probe_chroot_free(&g_rpm.chr);
+ 
+-	/*
+-	 * If r is null, probe_init() failed during chroot
+-	 */
++	// If r is null, probe_init() failed during chroot
+ 	if (r == NULL)
+ 		return;
+ 
+-	/*
+-	 * If r->rpm.rpmts was not initialized the mutex was not as well
+-	 */
++	// If r->rpm.rpmts was not initialized the mutex was not as well
+ 	if (r->rpm.rpmts == NULL)
+ 		return;
+ 
+@@ -435,16 +429,12 @@ int probe_main (probe_ctx *ctx, void *arg)
+ 	uint64_t collect_flags = 0;
+ 	unsigned int i;
+ 
+-	/*
+-	 * arg is NULL if we were not able to chroot during probe_init()
+-	 */
++	// arg is NULL if we were not able to chroot during probe_init()
+ 	if (arg == NULL) {
+ 		return PROBE_EINIT;
+ 	}
+ 
+-	/*
+-	 * There was no rpm config files
+-	 */
++	// There was no rpm config files
+ 	if (g_rpm.rpm.rpmts == NULL) {
+ 		probe_cobj_set_flag(probe_ctx_getresult(ctx), SYSCHAR_FLAG_NOT_APPLICABLE);
+ 		return 0;
