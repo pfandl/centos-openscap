@@ -5,18 +5,17 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.2.14
-Release:        3%{?dist}
+Version:        1.2.16
+Release:        6%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
-Source0:        http://fedorahosted.org/releases/o/p/openscap/%{name}-%{version}.tar.gz
-Patch0:         openscap-1.2.14-rpm-probes-not-applicable-PR-733.patch
-Patch1:         openscap-1.2.14-sysctl-test-s390x-PR-726.patch
-# We are reverting the patch below, not applying it! The patch has been modified to remove line count changes, we got rid of line count checking in 1.2.14
-Patch2:         openscap-1.2.14-warning-by-default-PR-630.patch
-Patch3:         openscap-1.2.15-use-checklist-id-to-get-html-guide-PR-745.patch
+Source0:        https://github.com/OpenSCAP/openscap/releases/download/%{version}/%{name}-%{version}.tar.gz
+Patch0:         openscap-1.2.17-updated-bash-completion.patch
+Patch1:         openscap-1.2.17-align-bash-role-header-with-help.patch
+Patch2:         openscap-1.2.17-revert-warnings-by-default.patch
+Patch3:         openscap-1.2.17-oscap-docker-cleanup-temp-image.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -77,7 +76,7 @@ Summary:        OpenSCAP Utilities
 Group:          Applications/System
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       rpmdevtools rpm-build
-Requires:       %{name}-scanner%{?_isa} = %{version}-%{release}
+Requires:       %{name}-containers = %{version}-%{release}
 
 %description    utils
 The %{name}-utils package contains command-line tools build on top
@@ -118,11 +117,22 @@ Requires:       pkgconfig
 The %{name}-engine-sce-devel package contains libraries and header files
 for developing applications that use %{name}-engine-sce.
 
+%package        containers
+Summary:        Utils for scanning containers
+Group:          Applications/System
+Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-scanner
+BuildArch:      noarch
+
+%description    containers
+Tool for scanning Atomic containers.
+
+
 %prep
 %setup -q
 %patch0 -p1
 %patch1 -p1
-%patch2 -p1 -R
+%patch2 -p1
 %patch3 -p1
 
 %build
@@ -241,8 +251,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/openscap/sce_engine_api.h
 
 %files scanner
-%{_mandir}/man8/oscap.8.gz
 %{_bindir}/oscap
+%{_mandir}/man8/oscap.8.gz
+%{_bindir}/oscap-chroot
+%{_mandir}/man8/oscap-chroot.8.gz
 %{_sysconfdir}/bash_completion.d
 
 %files utils
@@ -250,9 +262,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc docs/oscap-scan.cron
 %{_mandir}/man8/*
 %exclude %{_mandir}/man8/oscap.8.gz
+%exclude %{_mandir}/man8/oscap-docker.8.gz
+%exclude %{_mandir}/man8/oscap-chroot.8.gz
 %{_bindir}/*
 %exclude %{_bindir}/oscap
-%{python_sitelib}/oscap_docker_python/*
+%exclude %{_bindir}/oscap-docker
+%exclude %{_bindir}/oscap-chroot
 
 
 %files extra-probes
@@ -262,9 +277,60 @@ rm -rf $RPM_BUILD_ROOT
 %files engine-sce
 %{_libdir}/libopenscap_sce.so.*
 
+%files containers
+%defattr(-,root,root,-)
+%{_bindir}/oscap-docker
+%{_mandir}/man8/oscap-docker.8.gz
+%{python_sitelib}/oscap_docker_python/*
+
+
 %changelog
-* Wed Feb 21 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.14-3
-- Use checklist ID instead of hardcoded value to get HTML guide (#1545584)
+* Tue Feb 06 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.16-6
+- Cleanup temporary images created by oscap-docker (#1454637)
+
+* Tue Jan 23 2018 Jan Černý <jcerny@redhat.com> - 1.2.16-5
+- Revert warnings by default in oscap tool (#1537089)
+
+* Mon Jan 15 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.16-4
+- Fix requirement on openscap-containers
+
+* Tue Jan 09 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.16-3
+- Update bash completion (#1505517)
+- Align bash role header with output of help command (#1439813)
+
+* Mon Nov 20 2017 Matěj Týč <matyc@redhat.com> - 1.2.16-2
+- moved oscap-docker to newly created openscap-containers.
+- moved man of oscap-chroot to oscap-scanner.
+
+* Tue Nov 14 2017 Matěj Týč <matyc@redhat.com> - 1.2.16-1
+- upgrade to the latest upstream release
+- moved oscap-chroot to openscap-scanner because it's a thin wrapper script with no dependencies
+
+* Mon Aug 28 2017 Jan Černý <jcerny@redhat.com> - 1.2.15-1
+- upgrade to the latest upstream release
+- short profile names can be used instead of long IDs
+- new option --rule allows to evaluate only a single rule
+- new option --fix-type in "oscap xccdf generate fix" allows choosing
+  remediation script type without typing long URL
+- "oscap info" shows profile titles
+- OVAL details in HTML report are easier to read
+- HTML report is smaller because unselected rules are removed
+- HTML report supports NIST 800-171 and CJIS
+- remediation scripts contain headers with useful information (#1439813)
+- remediation scripts report progress when they run
+- basic support for Oracle Linux (CPEs, runlevels)
+- remediation scripts can be generated from datastreams that contain
+  multiple XCCDF benchmarks
+- basic support for OVAL 5.11.2 (only schemas, no features)
+- enabled offline RPM database in rpminfo probe
+- added Fedora 28 CPE
+- fixed oscap-docker with Docker >= 2.0
+- fixed behavior of sysctl probe to be consistent with sysctl tool
+- fixed generating remediation scripts
+- severity of tailored rules is not discarded
+- fixed errors in RPM probes initialization
+- oscap-docker shows all warnings reported by oscap
+- fixed pkgconfig file
 
 * Fri May 19 2017 Martin Preisler <mpreisle@redhat.com> - 1.2.14-2
 - RPM probes to return not applicable on non-rpm systems (#1447629)
