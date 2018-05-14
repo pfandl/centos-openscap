@@ -1,0 +1,120 @@
+From ff8e3a420f294339317f7d8d0e16f04a03511269 Mon Sep 17 00:00:00 2001
+From: Martin Preisler <mpreisle@redhat.com>
+Date: Wed, 18 Apr 2018 12:02:46 -0400
+Subject: [PATCH] Revert "Enables offline scan without chroot in
+ textfilecontent and textfilecontent54 probes"
+
+This reverts commit 908d002c68e43a3d3c3bede128c535fbee815a10.
+---
+ src/OVAL/probes/independent/textfilecontent.c   | 20 ++------------------
+ src/OVAL/probes/independent/textfilecontent54.c | 21 ++-------------------
+ 2 files changed, 4 insertions(+), 37 deletions(-)
+
+diff --git a/src/OVAL/probes/independent/textfilecontent.c b/src/OVAL/probes/independent/textfilecontent.c
+index 2edba7a9b..961cd98cb 100644
+--- a/src/OVAL/probes/independent/textfilecontent.c
++++ b/src/OVAL/probes/independent/textfilecontent.c
+@@ -327,13 +327,9 @@ static int process_file(const char *path, const char *filename, void *arg)
+ 	return ret;
+ }
+ 
+-void probe_offline_mode ()
+-{
+-	probe_setoption(PROBEOPT_OFFLINE_MODE_SUPPORTED, PROBE_OFFLINE_OWN);
+-}
+-
+ void *probe_init(void)
+ {
++	probe_setoption(PROBEOPT_OFFLINE_MODE_SUPPORTED, PROBE_OFFLINE_CHROOT);
+ 	return NULL;
+ }
+ 
+@@ -341,8 +337,6 @@ int probe_main(probe_ctx *ctx, void *arg)
+ {
+ 	SEXP_t *path_ent, *filename_ent, *line_ent, *behaviors_ent, *filepath_ent, *probe_in;
+ 	char *pattern;
+-	char path_with_root[PATH_MAX + 1];
+-	unsigned int root_len = 0;
+ 
+ 	OVAL_FTS    *ofts;
+ 	OVAL_FTSENT *ofts_ent;
+@@ -389,22 +383,12 @@ int probe_main(probe_ctx *ctx, void *arg)
+ 	pfd.filename_ent = filename_ent;
+ 	pfd.ctx = ctx;
+ 
+-	path_with_root[PATH_MAX] = '\0';
+-	if (OSCAP_GSYM(offline_mode) & PROBE_OFFLINE_OWN) {
+-		strncpy(path_with_root, getenv("OSCAP_PROBE_ROOT"), PATH_MAX);
+-		root_len = strlen(path_with_root);
+-
+-		if (path_with_root[root_len - 1] == FILE_SEPARATOR)
+-			--root_len;
+-	}		
+-
+ 	if ((ofts = oval_fts_open(path_ent, filename_ent, filepath_ent, behaviors_ent, probe_ctx_getresult(ctx))) != NULL) {
+ 		while ((ofts_ent = oval_fts_read(ofts)) != NULL) {
+ 			if (ofts_ent->fts_info == FTS_F
+ 			    || ofts_ent->fts_info == FTS_SL) {
+-				strncpy(path_with_root + root_len, ofts_ent->path, PATH_MAX - root_len);
+ 				// todo: handle return code
+-				process_file(path_with_root, ofts_ent->file, &pfd);
++				process_file(ofts_ent->path, ofts_ent->file, &pfd);
+ 			}
+ 			oval_ftsent_free(ofts_ent);
+ 		}
+diff --git a/src/OVAL/probes/independent/textfilecontent54.c b/src/OVAL/probes/independent/textfilecontent54.c
+index 1f76ee4e9..ecff6057b 100644
+--- a/src/OVAL/probes/independent/textfilecontent54.c
++++ b/src/OVAL/probes/independent/textfilecontent54.c
+@@ -347,13 +347,9 @@ static int process_file(const char *path, const char *file, void *arg)
+ 	return ret;
+ }
+ 
+-void probe_offline_mode ()
+-{
+-	probe_setoption(PROBEOPT_OFFLINE_MODE_SUPPORTED, PROBE_OFFLINE_OWN);
+-}
+-
+ void *probe_init(void)
+ {
++  probe_setoption(PROBEOPT_OFFLINE_MODE_SUPPORTED, PROBE_OFFLINE_CHROOT);
+   return NULL;
+ }
+ 
+@@ -375,8 +371,6 @@ int probe_main(probe_ctx *ctx, void *arg)
+ #endif
+ 	OVAL_FTS    *ofts;
+ 	OVAL_FTSENT *ofts_ent;
+-	char path_with_root[PATH_MAX + 1];
+-	unsigned int root_len = 0;
+ 
+         (void)arg;
+ 
+@@ -504,23 +498,12 @@ int probe_main(probe_ctx *ctx, void *arg)
+ 		goto cleanup;
+ 	}
+ #endif
+-
+-	path_with_root[PATH_MAX] = '\0';
+-	if (OSCAP_GSYM(offline_mode) & PROBE_OFFLINE_OWN) {
+-		strncpy(path_with_root, getenv("OSCAP_PROBE_ROOT"), PATH_MAX);
+-		root_len = strlen(path_with_root);
+-
+-		if (path_with_root[root_len - 1] == FILE_SEPARATOR)
+-			--root_len;
+-	}
+-
+ 	if ((ofts = oval_fts_open(path_ent, file_ent, filepath_ent, bh_ent, probe_ctx_getresult(ctx))) != NULL) {
+ 		while ((ofts_ent = oval_fts_read(ofts)) != NULL) {
+ 			if (ofts_ent->fts_info == FTS_F
+ 			    || ofts_ent->fts_info == FTS_SL) {
+-				strncpy(path_with_root + root_len, ofts_ent->path, PATH_MAX - root_len);
+ 				// todo: handle return code
+-				process_file(path_with_root, ofts_ent->file, &pfd);
++				process_file(ofts_ent->path, ofts_ent->file, &pfd);
+ 			}
+ 			oval_ftsent_free(ofts_ent);
+ 		}
+-- 
+2.14.3
+
