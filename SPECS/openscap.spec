@@ -5,19 +5,14 @@
 restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
-Version:        1.2.16
-Release:        8%{?dist}
+Version:        1.2.17
+Release:        2%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        https://github.com/OpenSCAP/openscap/releases/download/%{version}/%{name}-%{version}.tar.gz
-Patch0:         openscap-1.2.17-updated-bash-completion.patch
-Patch1:         openscap-1.2.17-align-bash-role-header-with-help.patch
-Patch2:         openscap-1.2.17-revert-warnings-by-default.patch
-Patch3:         openscap-1.2.17-oscap-docker-cleanup-temp-image.patch
-Patch4:         openscap-1.2.17-use-chroot-for-textfilecontent.patch
-Patch5:         openscap-1.2.17-use-chroot-for-rpm-probes.patch
+Patch1:		openscap-1.2.17-filehash58_probe_test.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -132,12 +127,7 @@ Tool for scanning Atomic containers.
 
 %prep
 %setup -q
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
+%patch1 -p1 -b .filehash58_probe_test
 
 %build
 %ifarch sparc64
@@ -289,11 +279,16 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Thu Apr 19 2018 Martin Preisler <mpreisle@redhat.com> - 1.2.16-8
-- Use the chroot mode for rpm probes (#1556988)
+* Tue Aug 14 2018 Matěj Týč <matyc@redhat.com> - 1.2.17-2
+- Patched to include tests for filehash58 probe.
 
-* Wed Apr 18 2018 Martin Preisler <mpreisle@redhat.com> - 1.2.16-7
-- Use the chroot mode for textfilecontent (#1547107)
+* Wed Jul 11 2018 Matěj Týč <matyc@redhat.com> - 1.2.17-1
+- Rebased to the 1.2.17 upstream release (#1564900).
+- Fixed the offline scanning (#1547107, #1556988).
+- HTML Guide user experience improvements.
+- New options in HTML report "Group By" menu.
+- oscap-ssh supports --oval-results.
+- For more news, see https://github.com/OpenSCAP/openscap/releases/tag/1.2.17
 
 * Tue Feb 06 2018 Watson Yuuma Sato <wsato@redhat.com> - 1.2.16-6
 - Cleanup temporary images created by oscap-docker (#1454637)
