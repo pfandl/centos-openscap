@@ -1,0 +1,36 @@
+From bbcbffcf6f901cb67ca5645307d170a32504a491 Mon Sep 17 00:00:00 2001
+From: Watson Sato <wsato@redhat.com>
+Date: Tue, 30 Apr 2019 18:30:53 +0200
+Subject: [PATCH] Allow DS session to continue without remote resources
+
+---
+ src/DS/sds.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/DS/sds.c b/src/DS/sds.c
+index 2511e89d9..b7c33a2e5 100644
+--- a/src/DS/sds.c
++++ b/src/DS/sds.c
+@@ -412,6 +412,7 @@ static int ds_sds_dump_component_by_href(struct ds_sds_session *session, char* x
+ 			}
+ 
+ 			ds_sds_session_remote_resources_progress(session)(true, "WARNING: Skipping '%s' file which is referenced from datastream\n", url);
++			// -2 means that remote resources were not downloaded
+ 			return -2;
+ 		}
+ 
+@@ -444,8 +445,12 @@ int ds_sds_dump_component_ref_as(const xmlNodePtr component_ref, struct ds_sds_s
+ 	xmlFree(xlink_href);
+ 	xmlFree(cref_id);
+ 
+-	if (ret != 0) {
+-
++	if (ret == -2) {
++		// A remote component was not dumped
++		// It should be ok to continue without it
++		free(target_filename_dirname);
++		return 0;
++	} else if (ret != 0) {
+ 		free(target_filename_dirname);
+ 		return -1;
+ 	}

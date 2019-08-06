@@ -6,13 +6,24 @@ restorecon -R /usr/bin/oscap /usr/libexec/openscap; \
 
 Name:           openscap
 Version:        1.2.17
-Release:        2%{?dist}
+Release:        4%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        https://github.com/OpenSCAP/openscap/releases/download/%{version}/%{name}-%{version}.tar.gz
-Patch1:		openscap-1.2.17-filehash58_probe_test.patch
+Patch1:         openscap-1.2.17-filehash58_probe_test.patch
+Patch2:         textfilecontent54_behaviors_ignored.patch
+Patch3:         autofs_entries_in_mtab.patch
+Patch4:         extend_unit_test_for_is_local_fs.patch
+Patch5:         ds_session_without_remote_resources.patch
+Patch6:         test_ds_session_without_remote_resources.patch
+Patch7:         fix_invalid_oval_in_test.patch
+Patch8:         oval_5_11_2_parsing_issues.patch
+Patch9:         add_scap_1_3_schema_and_detect_version.patch
+Patch10:        add_oval_results_to_test.patch
+Patch11:        do_not_skip_fs_binfmt_misc.patch
+Patch12:        make_is_local_fs_static_again.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  swig libxml2-devel libxslt-devel perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -22,6 +33,7 @@ BuildRequires:  libacl-devel
 BuildRequires:  libselinux-devel libcap-devel
 BuildRequires:  libblkid-devel
 BuildRequires:  bzip2-devel
+BuildRequires:  libtool
 %if %{?_with_check:1}%{!?_with_check:0}
 BuildRequires:  perl-XML-XPath
 %endif
@@ -128,6 +140,17 @@ Tool for scanning Atomic containers.
 %prep
 %setup -q
 %patch1 -p1 -b .filehash58_probe_test
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
+%patch9 -p1
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
 
 %build
 %ifarch sparc64
@@ -139,11 +162,15 @@ export CFLAGS="$RPM_OPT_FLAGS -fpie"
 export LDFLAGS="-pie -Wl,-z,relro -Wl,-z,now"
 %endif
 
+autoreconf -is
 %configure --enable-sce
 
 make %{?_smp_mflags}
 # Remove shebang from bash-completion script
 sed -i '/^#!.*bin/,+1 d' dist/bash_completion.d/oscap
+# Change permissions of test_detect_version.sh
+# Please remove it after rebase to OpenSCAP 1.2.18 or newer.
+chmod 755 tests/DS/sds_detect_version/test_detect_version.sh
 
 %check
 #to run make check use "--with check"
@@ -279,6 +306,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Jun 06 2019 Jan Černý <jcerny@redhat.com> - 1.2.17-4
+- Make is_local_fs static again to avoid API changes between releases
+
+* Mon May 27 2019 Jan Černý <jcerny@redhat.com> - 1.2.17-3
+- Fix unwanted recursion into mounted remote filesystems (#1655943)
+- Evaluate SCAP 1.3 datastreams without downloading remote data (#1709423)
+
 * Tue Aug 14 2018 Matěj Týč <matyc@redhat.com> - 1.2.17-2
 - Patched to include tests for filehash58 probe.
 

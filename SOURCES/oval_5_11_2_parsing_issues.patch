@@ -1,0 +1,164 @@
+From 3d081a4345b2b4f838e5e9fb4fab78b1bad717a9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Wed, 22 May 2019 15:03:52 +0200
+Subject: [PATCH] Resolve parsing issues with OVAL 5.11.2 schemas
+
+Similar to 8ba623120fc9f479285f9d6032cb925db420011d but for OVAL 5.11.2.
+The missing namespace imports have already been fixed in
+32d4d9be295084f95bfbaec07ea84373b3b4aeb7. Addressing:
+```
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1446: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1459: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1472: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1485: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1652: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1665: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1678: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+File '/root/openscap/schemas/oval/5.11.2/oval-definitions-schema.xsd'
+line 1691: local union type: A type, derived by list or union, must have
+the simple ur-type definition as base type, not
+'{http://oval.mitre.org/XMLSchema/oval-definitions-5}(NULL)'.
+OpenSCAP Error: Could not parse XML schema [validate.c:113]
+```
+---
+ schemas/oval/5.11.2/oval-definitions-schema.xsd  | 16 ++++++++--------
+ .../oval-system-characteristics-schema.xsd       |  8 ++++----
+ 2 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/schemas/oval/5.11.2/oval-definitions-schema.xsd b/schemas/oval/5.11.2/oval-definitions-schema.xsd
+index 9aa338603..42c238e1e 100644
+--- a/schemas/oval/5.11.2/oval-definitions-schema.xsd
++++ b/schemas/oval/5.11.2/oval-definitions-schema.xsd
+@@ -1450,7 +1450,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntitySimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:hexBinary oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="binary"/>                                                
+             </xsd:restriction>
+@@ -1463,7 +1463,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntitySimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:boolean oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="boolean"/>                                                
+             </xsd:restriction>
+@@ -1476,7 +1476,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntitySimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:float oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="float"/>                                                
+             </xsd:restriction>
+@@ -1489,7 +1489,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntitySimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:integer oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="int"/>                                
+             </xsd:restriction>
+@@ -1656,7 +1656,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntityStateSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:hexBinary oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="binary"/>                                
+             </xsd:restriction>
+@@ -1669,7 +1669,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntityStateSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:boolean oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="boolean"/>                                
+             </xsd:restriction>
+@@ -1682,7 +1682,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntityStateSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:float oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="float"/>                                                
+             </xsd:restriction>
+@@ -1695,7 +1695,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-def:EntityStateSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:integer oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="int"/>                
+             </xsd:restriction>
+diff --git a/schemas/oval/5.11.2/oval-system-characteristics-schema.xsd b/schemas/oval/5.11.2/oval-system-characteristics-schema.xsd
+index 030274c4a..c71de366a 100644
+--- a/schemas/oval/5.11.2/oval-system-characteristics-schema.xsd
++++ b/schemas/oval/5.11.2/oval-system-characteristics-schema.xsd
+@@ -493,7 +493,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-sc:EntityItemSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:hexBinary oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="binary"/>                                                
+             </xsd:restriction>
+@@ -506,7 +506,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-sc:EntityItemSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:boolean oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="boolean"/>                                                
+             </xsd:restriction>
+@@ -519,7 +519,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-sc:EntityItemSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:float oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="float"/>
+             </xsd:restriction>
+@@ -532,7 +532,7 @@
+         <xsd:simpleContent>
+             <xsd:restriction base="oval-sc:EntityItemSimpleBaseType">
+                 <xsd:simpleType>
+-                    <xsd:union memberTypes="xsd:integer oval:EmptyStringType"/>
++                    <xsd:restriction base="xsd:string"/>
+                 </xsd:simpleType>
+                 <xsd:attribute name="datatype" type="oval:SimpleDatatypeEnumeration" use="required" fixed="int"/>
+             </xsd:restriction>

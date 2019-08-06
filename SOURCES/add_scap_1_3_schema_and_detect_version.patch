@@ -1,0 +1,1576 @@
+From 5bf1556bc867401e664de67a0b2ccaa8e7c86ce4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Tue, 7 May 2019 12:33:31 +0200
+Subject: [PATCH 1/9] Add SCAP 1.3 source datastream schema
+
+Downloaded from
+https://csrc.nist.gov/schema/scap/1.3/scap-source-data-stream_1.3.xsd
+Converted the EOLs to Unix using `dos2unix` tool.
+---
+ schemas/Makefile.am                           |   3 +
+ .../sds/1.3/scap-source-data-stream_1.3.xsd   | 230 ++++++++++++++++++
+ 2 files changed, 233 insertions(+)
+ create mode 100644 schemas/sds/1.3/scap-source-data-stream_1.3.xsd
+
+diff --git a/schemas/Makefile.am b/schemas/Makefile.am
+index 5a5cf015e..2ca4851e6 100644
+--- a/schemas/Makefile.am
++++ b/schemas/Makefile.am
+@@ -15,6 +15,7 @@ xccdf11dir = $(pkgdatadir)/schemas/xccdf/1.1/
+ xccdf11tailoringdir = $(pkgdatadir)/schemas/xccdf/1.1-tailoring/
+ xccdf12dir = $(pkgdatadir)/schemas/xccdf/1.2/
+ sds12dir = $(pkgdatadir)/schemas/sds/1.2/
++sds13dir = $(pkgdatadir)/schemas/sds/1.3/
+ arf11dir = $(pkgdatadir)/schemas/arf/1.1/
+ ocil20dir = $(pkgdatadir)/schemas/ocil/2.0/
+ cpe20dir = $(pkgdatadir)/schemas/cpe/2.0/
+@@ -46,6 +47,7 @@ xccdf11tailoring_DATA = $(wildcard $(srcdir)/xccdf/1.1-tailoring/*.xsd $(srcdir)
+ xccdf12_DATA = $(wildcard $(srcdir)/xccdf/1.2/*.xsd $(srcdir)/xccdf/1.2/*.dtd $(srcdir)/xccdf/1.2/*.xsl)
+ 
+ sds12_DATA = $(wildcard $(srcdir)/sds/1.2/*.xsd $(srcdir)/sds/1.2/*.dtd)
++sds13_DATA = $(wildcard $(srcdir)/sds/1.3/*.xsd $(srcdir)/sds/1.3/*.dtd)
+ arf11_DATA = $(wildcard $(srcdir)/arf/1.1/*.xsd)
+ 
+ ocil20_DATA = $(wildcard $(srcdir)/ocil/2.0/*.xsd $(srcdir)/sds/2.0/*.dtd)
+@@ -77,6 +79,7 @@ EXTRA_DIST = \
+ 	$(xccdf11tailoring_DATA) \
+ 	$(xccdf12_DATA) \
+ 	$(sds12_DATA) \
++	$(sds13_DATA) \
+ 	$(arf11_DATA) \
+ 	$(ocil20_DATA) \
+ 	$(cpe20_DATA) \
+diff --git a/schemas/sds/1.3/scap-source-data-stream_1.3.xsd b/schemas/sds/1.3/scap-source-data-stream_1.3.xsd
+new file mode 100644
+index 000000000..4a933ba2e
+--- /dev/null
++++ b/schemas/sds/1.3/scap-source-data-stream_1.3.xsd
+@@ -0,0 +1,230 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2"
++  xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-definitions-5"
++  xmlns:cpe-dict="http://cpe.mitre.org/dictionary/2.0" xmlns:ocil="http://scap.nist.gov/schema/ocil/2.0"
++  xmlns:dsig="http://www.w3.org/2000/09/xmldsig#" targetNamespace="http://scap.nist.gov/schema/scap/source/1.2"
++  xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink"
++  elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.3">
++  <xs:annotation>
++    <xs:appinfo>
++      <schema>SCAP 1.3 Source Data Stream Collection</schema>
++      <author>Adam Halbardier, David Waltermire</author>
++      <version>1.3</version>
++      <date>2016-12-01</date>
++    </xs:appinfo>
++  </xs:annotation>
++  <xs:import namespace="http://checklists.nist.gov/xccdf/1.2"
++    schemaLocation="/schema/xccdf/1.2/xccdf_1.2.xsd"/>
++  <xs:import namespace="http://oval.mitre.org/XMLSchema/oval-definitions-5"
++    schemaLocation="https://raw.githubusercontent.com/OVALProject/Language/5.11.2/schemas/oval-definitions-schema.xsd"/>
++  <xs:import namespace="http://cpe.mitre.org/dictionary/2.0"
++    schemaLocation="/schema/cpe/2.3/cpe-dictionary_2.3.xsd"/>
++  <xs:import namespace="http://scap.nist.gov/schema/ocil/2.0"
++    schemaLocation="/schema/ocil/2.0/ocil-2.0.xsd"/>
++  <xs:import namespace="http://www.w3.org/2000/09/xmldsig#"
++    schemaLocation="https://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd"/>
++  <xs:import namespace="urn:oasis:names:tc:entity:xmlns:xml:catalog"
++    schemaLocation="http://www.oasis-open.org/committees/entity/release/1.1/catalog.xsd"/>
++  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="https://www.w3.org/1999/xlink.xsd"/>
++  <xs:element name="data-stream-collection">
++    <xs:annotation>
++      <xs:documentation>Holds a collection of data streams and components.</xs:documentation>
++    </xs:annotation>
++    <xs:complexType>
++      <xs:sequence>
++        <xs:element maxOccurs="unbounded" ref="ds:data-stream"/>
++        <xs:element maxOccurs="unbounded" ref="ds:component"/>
++        <xs:element maxOccurs="unbounded" minOccurs="0" ref="ds:extended-component"/>
++        <xs:element maxOccurs="unbounded" minOccurs="0" ref="dsig:Signature">
++          <xs:annotation>
++            <xs:documentation>A digital signature of a data stream.</xs:documentation>
++          </xs:annotation>
++        </xs:element>
++      </xs:sequence>
++      <xs:attribute name="id" use="required">
++        <xs:annotation>
++          <xs:documentation>This MUST be a globally unique ID.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:restriction base="xs:ID">
++            <xs:pattern value="scap_[^_]+_collection_.+"/>
++          </xs:restriction>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="schematron-version" type="xs:token" use="required">
++        <xs:annotation>
++          <xs:documentation>The version of the requirements Schematron ruleset to which the instance
++            conforms.</xs:documentation>
++        </xs:annotation>
++      </xs:attribute>
++    </xs:complexType>
++  </xs:element>
++  <xs:element name="data-stream">
++    <xs:annotation>
++      <xs:documentation>An SCAP data stream containing pointers to all of the components composing the data
++        stream.</xs:documentation>
++    </xs:annotation>
++    <xs:complexType>
++      <xs:sequence>
++        <xs:element name="dictionaries" type="ds:refListType" minOccurs="0">
++          <xs:annotation>
++            <xs:documentation>Holds pointers to dictionary components.</xs:documentation>
++          </xs:annotation>
++        </xs:element>
++        <xs:element name="checklists" type="ds:refListType" minOccurs="0">
++          <xs:annotation>
++            <xs:documentation>Holds pointers to checklist components.</xs:documentation>
++          </xs:annotation>
++        </xs:element>
++        <xs:element name="checks" type="ds:refListType">
++          <xs:annotation>
++            <xs:documentation>Holds pointers to check components.</xs:documentation>
++          </xs:annotation>
++        </xs:element>
++        <xs:element minOccurs="0" name="extended-components" type="ds:refListType">
++          <xs:annotation>
++            <xs:documentation>Holds pointers to non-standard SCAP components captured as extended-component
++              elements.</xs:documentation>
++          </xs:annotation>
++        </xs:element>
++      </xs:sequence>
++      <xs:attribute name="id" use="required">
++        <xs:annotation>
++          <xs:documentation>This MUST be a globally unique ID.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:restriction base="xs:ID">
++            <xs:pattern value="scap_[^_]+_datastream_.+"/>
++          </xs:restriction>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="use-case" use="required">
++        <xs:annotation>
++          <xs:documentation>The SCAP capability being expressed by this data stream. The type is expressed to allow for
++            future use of this schema while indicating the currently acceptable values.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:union memberTypes="ds:useCaseType xs:token"/>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="scap-version" use="required">
++        <xs:annotation>
++          <xs:documentation>The version of SCAP expressed by this data stream. The type is expressed to allow for future
++            use of this schema while indicating the currently acceptable values.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:union memberTypes="ds:scapVersionType xs:token"/>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="timestamp" type="xs:dateTime">
++        <xs:annotation>
++          <xs:documentation>The time when the data stream was created or last modified.</xs:documentation>
++        </xs:annotation>
++      </xs:attribute>
++    </xs:complexType>
++  </xs:element>
++  <xs:element name="component">
++    <xs:annotation>
++      <xs:documentation>A component that is used by an SCAP data stream.</xs:documentation>
++    </xs:annotation>
++    <xs:complexType>
++      <xs:choice>
++        <xs:element ref="xccdf:Benchmark"/>
++        <xs:element ref="oval:oval_definitions"/>
++        <xs:element ref="ocil:ocil"/>
++        <xs:element ref="cpe-dict:cpe-list"/>
++        <xs:element ref="xccdf:Tailoring"/>
++      </xs:choice>
++      <xs:attribute name="id" use="required">
++        <xs:annotation>
++          <xs:documentation>This MUST be a globally unique ID.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:restriction base="xs:ID">
++            <xs:pattern value="scap_[^_]+_comp_.+"/>
++          </xs:restriction>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="timestamp" type="xs:dateTime" use="required">
++        <xs:annotation>
++          <xs:documentation>The time when the component was created or last modified.</xs:documentation>
++        </xs:annotation>
++      </xs:attribute>
++    </xs:complexType>
++    <xs:unique name="cpeDictionaryUnique">
++      <xs:selector xpath="cpe-dict:cpe-list/cpe-dict:cpe-item"/>
++      <xs:field xpath="@name"/>
++    </xs:unique>
++  </xs:element>
++  <xs:element name="extended-component">
++    <xs:annotation>
++      <xs:documentation>A component that holds non-standard SCAP content.</xs:documentation>
++    </xs:annotation>
++    <xs:complexType>
++      <xs:sequence>
++        <xs:any namespace="##other" processContents="lax"/>
++      </xs:sequence>
++      <xs:attribute name="id" use="required">
++        <xs:annotation>
++          <xs:documentation>This MUST be a globally unique ID.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:restriction base="xs:ID">
++            <xs:pattern value="scap_[^_]+_ecomp_.+"/>
++          </xs:restriction>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute name="timestamp" type="xs:dateTime" use="required">
++        <xs:annotation>
++          <xs:documentation>The time when the component was created or last modified.</xs:documentation>
++        </xs:annotation>
++      </xs:attribute>
++    </xs:complexType>
++  </xs:element>
++  <xs:element name="component-ref">
++    <xs:annotation>
++      <xs:documentation>An XLink element that points to a component.</xs:documentation>
++    </xs:annotation>
++    <xs:complexType>
++      <xs:sequence>
++        <xs:element minOccurs="0" ref="cat:catalog"/>
++      </xs:sequence>
++      <xs:attribute name="id" use="required">
++        <xs:annotation>
++          <xs:documentation>This MUST be a globally unique ID.</xs:documentation>
++        </xs:annotation>
++        <xs:simpleType>
++          <xs:restriction base="xs:ID">
++            <xs:pattern value="scap_[^_]+_cref_.+"/>
++          </xs:restriction>
++        </xs:simpleType>
++      </xs:attribute>
++      <xs:attribute fixed="simple" ref="xlink:type"/>
++      <xs:attribute use="required" ref="xlink:href"/>
++    </xs:complexType>
++  </xs:element>
++  <xs:simpleType name="useCaseType">
++    <xs:restriction base="xs:token">
++      <xs:enumeration value="CONFIGURATION"/>
++      <xs:enumeration value="VULNERABILITY"/>
++      <xs:enumeration value="INVENTORY"/>
++      <xs:enumeration value="OTHER"/>
++    </xs:restriction>
++  </xs:simpleType>
++  <xs:simpleType name="scapVersionType">
++    <xs:restriction base="xs:token">
++      <xs:enumeration value="1.0"/>
++      <xs:enumeration value="1.1"/>
++      <xs:enumeration value="1.2"/>
++      <xs:enumeration value="1.3"/>
++    </xs:restriction>
++  </xs:simpleType>
++  <xs:complexType name="contentSourceType">
++    <xs:attribute name="href" type="xs:anyURI" use="required"/>
++  </xs:complexType>
++  <xs:complexType name="refListType">
++    <xs:sequence>
++      <xs:element maxOccurs="unbounded" ref="ds:component-ref"/>
++    </xs:sequence>
++  </xs:complexType>
++</xs:schema>
+
+From a005cfd40e2dd217e779102d6347384ec0e4a4d6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Tue, 7 May 2019 14:03:53 +0200
+Subject: [PATCH 2/9] Move OASIS XML Catalog schema to the common directory
+
+This way we can reuse the OASIS XML Catalog schema in
+other schemas.
+---
+ schemas/{sds/1.2 => common}/catalog.xsd         | 0
+ schemas/sds/1.2/scap-source-data-stream_1.2.xsd | 2 +-
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+ rename schemas/{sds/1.2 => common}/catalog.xsd (100%)
+
+diff --git a/schemas/sds/1.2/catalog.xsd b/schemas/common/catalog.xsd
+similarity index 100%
+rename from schemas/sds/1.2/catalog.xsd
+rename to schemas/common/catalog.xsd
+diff --git a/schemas/sds/1.2/scap-source-data-stream_1.2.xsd b/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
+index 606a92445..0dd91f010 100644
+--- a/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
++++ b/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
+@@ -14,7 +14,7 @@
+   <xs:import namespace="http://cpe.mitre.org/dictionary/2.0" schemaLocation="cpe-dictionary_2.3.xsd"/>
+   <xs:import namespace="http://scap.nist.gov/schema/ocil/2.0" schemaLocation="../../ocil/2.0/ocil-2.0.xsd"/>
+   <xs:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="../../common/xmldsig-core-schema.xsd"/>
+-  <xs:import namespace="urn:oasis:names:tc:entity:xmlns:xml:catalog" schemaLocation="catalog.xsd"/>
++  <xs:import namespace="urn:oasis:names:tc:entity:xmlns:xml:catalog" schemaLocation="../../common/catalog.xsd"/>
+   <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+   <xs:element name="data-stream-collection">
+     <xs:annotation>
+
+From 61b89c3c9314be3f606bdb7f1b156a7a8359719e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Tue, 7 May 2019 14:08:53 +0200
+Subject: [PATCH 3/9] Move W3C Xlink schema to common directory
+
+This way the schema can be reused in multiple different schemas.
+---
+ .../arf/1.1/asset-reporting-format_1.1.0.xsd  |   2 +-
+ schemas/{arf/1.1 => common}/xlink.xsd         |   2 +-
+ .../sds/1.2/scap-source-data-stream_1.2.xsd   |   2 +-
+ schemas/sds/1.2/xlink.xsd                     | 270 ------------------
+ 4 files changed, 3 insertions(+), 273 deletions(-)
+ rename schemas/{arf/1.1 => common}/xlink.xsd (96%)
+ delete mode 100644 schemas/sds/1.2/xlink.xsd
+
+diff --git a/schemas/arf/1.1/asset-reporting-format_1.1.0.xsd b/schemas/arf/1.1/asset-reporting-format_1.1.0.xsd
+index 3617e854f..7e60eb4f6 100644
+--- a/schemas/arf/1.1/asset-reporting-format_1.1.0.xsd
++++ b/schemas/arf/1.1/asset-reporting-format_1.1.0.xsd
+@@ -104,7 +104,7 @@
+     </xs:annotation>
+ 
+     <xs:import namespace="http://scap.nist.gov/schema/asset-identification/1.1" schemaLocation="asset-identification_1.1.0.xsd"/>
+-    <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
++    <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="../../common/xlink.xsd"/>
+     <xs:import namespace="http://scap.nist.gov/schema/reporting-core/1.1" schemaLocation="reporting-core_1.1.0.xsd"/>
+     <xs:element name="asset-report-collection">
+         <xs:annotation>
+diff --git a/schemas/arf/1.1/xlink.xsd b/schemas/common/xlink.xsd
+similarity index 96%
+rename from schemas/arf/1.1/xlink.xsd
+rename to schemas/common/xlink.xsd
+index ea77d428f..0b2645e90 100644
+--- a/schemas/arf/1.1/xlink.xsd
++++ b/schemas/common/xlink.xsd
+@@ -24,7 +24,7 @@ constructs, e.g.
+ </xs:schema>]]></xs:documentation>
+  </xs:annotation>
+ 
+- <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="../../common/xml.xsd"/>
++ <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+ 
+  <xs:attribute name="type" type="xlink:typeType"/>
+ 
+diff --git a/schemas/sds/1.2/scap-source-data-stream_1.2.xsd b/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
+index 0dd91f010..72de4f98e 100644
+--- a/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
++++ b/schemas/sds/1.2/scap-source-data-stream_1.2.xsd
+@@ -15,7 +15,7 @@
+   <xs:import namespace="http://scap.nist.gov/schema/ocil/2.0" schemaLocation="../../ocil/2.0/ocil-2.0.xsd"/>
+   <xs:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="../../common/xmldsig-core-schema.xsd"/>
+   <xs:import namespace="urn:oasis:names:tc:entity:xmlns:xml:catalog" schemaLocation="../../common/catalog.xsd"/>
+-  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
++  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="../../common/xlink.xsd"/>
+   <xs:element name="data-stream-collection">
+     <xs:annotation>
+       <xs:documentation>Holds a collection of data streams and components.</xs:documentation>
+diff --git a/schemas/sds/1.2/xlink.xsd b/schemas/sds/1.2/xlink.xsd
+deleted file mode 100644
+index ea77d428f..000000000
+--- a/schemas/sds/1.2/xlink.xsd
++++ /dev/null
+@@ -1,270 +0,0 @@
+-<?xml version='1.0' encoding='UTF-8'?>
+-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">
+- 
+- <xs:annotation>
+-  <xs:documentation>This schema document provides attribute declarations and
+-attribute group, complex type and simple type definitions which can be used in
+-the construction of user schemas to define the structure of particular linking
+-constructs, e.g.
+-<![CDATA[
+-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+-           xmlns:xl="http://www.w3.org/1999/xlink">
+-
+- <xs:import namespace="http://www.w3.org/1999/xlink"
+-            location="http://www.w3.org/1999/xlink.xsd">
+-
+- <xs:element name="mySimple">
+-  <xs:complexType>
+-   ...
+-   <xs:attributeGroup ref="xl:simpleAttrs"/>
+-   ...
+-  </xs:complexType>
+- </xs:element>
+- ...
+-</xs:schema>]]></xs:documentation>
+- </xs:annotation>
+-
+- <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="../../common/xml.xsd"/>
+-
+- <xs:attribute name="type" type="xlink:typeType"/>
+-
+- <xs:simpleType name="typeType">
+-  <xs:restriction base="xs:token">
+-   <xs:enumeration value="simple"/>
+-   <xs:enumeration value="extended"/>
+-   <xs:enumeration value="title"/>
+-   <xs:enumeration value="resource"/>
+-   <xs:enumeration value="locator"/>
+-   <xs:enumeration value="arc"/>
+-  </xs:restriction>
+- </xs:simpleType>
+-
+- <xs:attribute name="href" type="xlink:hrefType"/>
+-
+- <xs:simpleType name="hrefType">
+-  <xs:restriction base="xs:anyURI"/>
+- </xs:simpleType>
+-
+- <xs:attribute name="role" type="xlink:roleType"/>
+-
+- <xs:simpleType name="roleType">
+-  <xs:restriction base="xs:anyURI">
+-   <xs:minLength value="1"/>
+-  </xs:restriction>
+- </xs:simpleType>
+-
+- <xs:attribute name="arcrole" type="xlink:arcroleType"/>
+-
+- <xs:simpleType name="arcroleType">
+-  <xs:restriction base="xs:anyURI">
+-   <xs:minLength value="1"/>
+-  </xs:restriction>
+- </xs:simpleType>
+-
+- <xs:attribute name="title" type="xlink:titleAttrType"/>
+-
+- <xs:simpleType name="titleAttrType">
+-  <xs:restriction base="xs:string"/>
+- </xs:simpleType>
+-
+- <xs:attribute name="show" type="xlink:showType"/>
+-
+- <xs:simpleType name="showType">
+-  <xs:restriction base="xs:token">
+-   <xs:enumeration value="new"/>
+-   <xs:enumeration value="replace"/>
+-   <xs:enumeration value="embed"/>
+-   <xs:enumeration value="other"/>
+-   <xs:enumeration value="none"/>
+-  </xs:restriction>
+- </xs:simpleType>
+-
+- <xs:attribute name="actuate" type="xlink:actuateType"/>
+-
+- <xs:simpleType name="actuateType">
+-  <xs:restriction base="xs:token">
+-   <xs:enumeration value="onLoad"/>
+-   <xs:enumeration value="onRequest"/>
+-   <xs:enumeration value="other"/>
+-   <xs:enumeration value="none"/>
+-  </xs:restriction>
+- </xs:simpleType>
+-
+- <xs:attribute name="label" type="xlink:labelType"/>
+-
+- <xs:simpleType name="labelType">
+-  <xs:restriction base="xs:NCName"/>
+- </xs:simpleType>
+-
+- <xs:attribute name="from" type="xlink:fromType"/>
+-
+- <xs:simpleType name="fromType">
+-  <xs:restriction base="xs:NCName"/>
+- </xs:simpleType>
+-
+- <xs:attribute name="to" type="xlink:toType"/>
+-
+- <xs:simpleType name="toType">
+-  <xs:restriction base="xs:NCName"/>
+- </xs:simpleType>
+-
+- <xs:attributeGroup name="simpleAttrs">
+-  <xs:attribute ref="xlink:type" fixed="simple"/>
+-  <xs:attribute ref="xlink:href"/>
+-  <xs:attribute ref="xlink:role"/>
+-  <xs:attribute ref="xlink:arcrole"/>
+-  <xs:attribute ref="xlink:title"/>
+-  <xs:attribute ref="xlink:show"/>
+-  <xs:attribute ref="xlink:actuate"/>
+- </xs:attributeGroup>
+-
+- <xs:group name="simpleModel">
+-  <xs:sequence>
+-   <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+-  </xs:sequence>
+- </xs:group>
+-
+- <xs:complexType mixed="true" name="simple">
+-  <xs:annotation>
+-   <xs:documentation>
+-    Intended for use as the type of user-declared elements to make them
+-    simple links.
+-   </xs:documentation>
+-  </xs:annotation>
+-  <xs:group ref="xlink:simpleModel"/>
+-  <xs:attributeGroup ref="xlink:simpleAttrs"/>
+- </xs:complexType>
+-
+- <xs:attributeGroup name="extendedAttrs">
+-  <xs:attribute ref="xlink:type" fixed="extended" use="required"/>
+-  <xs:attribute ref="xlink:role"/>
+-  <xs:attribute ref="xlink:title"/>
+- </xs:attributeGroup>
+-
+- <xs:group name="extendedModel">
+-   <xs:choice>
+-    <xs:element ref="xlink:title"/>
+-    <xs:element ref="xlink:resource"/>
+-    <xs:element ref="xlink:locator"/>
+-    <xs:element ref="xlink:arc"/>
+-  </xs:choice>
+- </xs:group>
+-
+- <xs:complexType name="extended">
+-  <xs:annotation>
+-   <xs:documentation>
+-    Intended for use as the type of user-declared elements to make them
+-    extended links.
+-    Note that the elements referenced in the content model are all abstract.
+-    The intention is that by simply declaring elements with these as their
+-    substitutionGroup, all the right things will happen.
+-   </xs:documentation>
+-  </xs:annotation>
+-  <xs:group ref="xlink:extendedModel" minOccurs="0" maxOccurs="unbounded"/>
+-  <xs:attributeGroup ref="xlink:extendedAttrs"/>
+- </xs:complexType>
+-
+- <xs:element name="title" type="xlink:titleEltType" abstract="true"/>
+-
+- <xs:attributeGroup name="titleAttrs">
+-  <xs:attribute ref="xlink:type" fixed="title" use="required"/>
+-  <xs:attribute ref="xml:lang">
+-   <xs:annotation>
+-    <xs:documentation>
+-     xml:lang is not required, but provides much of the
+-     motivation for title elements in addition to attributes, and so
+-     is provided here for convenience.
+-    </xs:documentation>
+-   </xs:annotation>
+-  </xs:attribute>
+- </xs:attributeGroup>
+-
+- <xs:group name="titleModel">
+-  <xs:sequence>
+-   <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+-  </xs:sequence>
+- </xs:group>
+-
+- <xs:complexType mixed="true" name="titleEltType">
+-  <xs:group ref="xlink:titleModel"/>
+-  <xs:attributeGroup ref="xlink:titleAttrs"/>
+- </xs:complexType>
+-
+- <xs:element name="resource" type="xlink:resourceType" abstract="true"/>
+-
+- <xs:attributeGroup name="resourceAttrs">
+-  <xs:attribute ref="xlink:type" fixed="resource" use="required"/>
+-  <xs:attribute ref="xlink:role"/>
+-  <xs:attribute ref="xlink:title"/>
+-  <xs:attribute ref="xlink:label"/>
+- </xs:attributeGroup>
+-
+- <xs:group name="resourceModel">
+-  <xs:sequence>
+-   <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+-  </xs:sequence>
+- </xs:group>
+-
+- <xs:complexType mixed="true" name="resourceType">
+-  <xs:group ref="xlink:resourceModel"/>
+-  <xs:attributeGroup ref="xlink:resourceAttrs"/>
+- </xs:complexType>
+-
+- <xs:element name="locator" type="xlink:locatorType" abstract="true"/>
+-
+- <xs:attributeGroup name="locatorAttrs">
+-  <xs:attribute ref="xlink:type" fixed="locator" use="required"/>
+-  <xs:attribute ref="xlink:href" use="required"/>
+-  <xs:attribute ref="xlink:role"/>
+-  <xs:attribute ref="xlink:title"/>
+-  <xs:attribute ref="xlink:label">
+-   <xs:annotation>
+-    <xs:documentation>
+-     label is not required, but locators have no particular
+-     XLink function if they are not labeled.
+-    </xs:documentation>
+-   </xs:annotation>
+-  </xs:attribute>
+- </xs:attributeGroup>
+-
+- <xs:group name="locatorModel">
+-  <xs:sequence>
+-   <xs:element ref="xlink:title" minOccurs="0" maxOccurs="unbounded"/>
+-  </xs:sequence>
+- </xs:group>
+-
+- <xs:complexType name="locatorType">
+-  <xs:group ref="xlink:locatorModel"/>
+-  <xs:attributeGroup ref="xlink:locatorAttrs"/>
+- </xs:complexType>
+-
+- <xs:element name="arc" type="xlink:arcType" abstract="true"/>
+-
+- <xs:attributeGroup name="arcAttrs">
+-  <xs:attribute ref="xlink:type" fixed="arc" use="required"/>
+-  <xs:attribute ref="xlink:arcrole"/>
+-  <xs:attribute ref="xlink:title"/>
+-  <xs:attribute ref="xlink:show"/>
+-  <xs:attribute ref="xlink:actuate"/>
+-  <xs:attribute ref="xlink:from"/>
+-  <xs:attribute ref="xlink:to">
+-   <xs:annotation>
+-    <xs:documentation>
+-     from and to have default behavior when values are missing
+-    </xs:documentation>
+-   </xs:annotation>
+-  </xs:attribute>
+- </xs:attributeGroup>
+-
+- <xs:group name="arcModel">
+-  <xs:sequence>
+-   <xs:element ref="xlink:title" minOccurs="0" maxOccurs="unbounded"/>
+-  </xs:sequence>
+- </xs:group>
+-
+- <xs:complexType name="arcType">
+-  <xs:group ref="xlink:arcModel"/>
+-  <xs:attributeGroup ref="xlink:arcAttrs"/>
+- </xs:complexType>
+-
+-</xs:schema>
+
+From 9aeca3c095e10e5aa4d19516283bafb4f7ac567a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Tue, 7 May 2019 14:15:18 +0200
+Subject: [PATCH 4/9] Use local XSDs in SCAP 1.3 source data stream schema
+
+Similar to acef6dd61270546aec9f2213f9b8d71ae9aab73b
+---
+ schemas/sds/1.3/scap-source-data-stream_1.3.xsd | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/schemas/sds/1.3/scap-source-data-stream_1.3.xsd b/schemas/sds/1.3/scap-source-data-stream_1.3.xsd
+index 4a933ba2e..7d6e2b177 100644
+--- a/schemas/sds/1.3/scap-source-data-stream_1.3.xsd
++++ b/schemas/sds/1.3/scap-source-data-stream_1.3.xsd
+@@ -14,18 +14,18 @@
+     </xs:appinfo>
+   </xs:annotation>
+   <xs:import namespace="http://checklists.nist.gov/xccdf/1.2"
+-    schemaLocation="/schema/xccdf/1.2/xccdf_1.2.xsd"/>
++    schemaLocation="../../xccdf/1.2/xccdf_1.2.xsd"/>
+   <xs:import namespace="http://oval.mitre.org/XMLSchema/oval-definitions-5"
+-    schemaLocation="https://raw.githubusercontent.com/OVALProject/Language/5.11.2/schemas/oval-definitions-schema.xsd"/>
++    schemaLocation="../../oval/5.11.2/oval-definitions-schema.xsd"/>
+   <xs:import namespace="http://cpe.mitre.org/dictionary/2.0"
+-    schemaLocation="/schema/cpe/2.3/cpe-dictionary_2.3.xsd"/>
++    schemaLocation="../../cpe/2.3/cpe-dictionary_2.3.xsd"/>
+   <xs:import namespace="http://scap.nist.gov/schema/ocil/2.0"
+-    schemaLocation="/schema/ocil/2.0/ocil-2.0.xsd"/>
++    schemaLocation="../../ocil/2.0/ocil-2.0.xsd"/>
+   <xs:import namespace="http://www.w3.org/2000/09/xmldsig#"
+-    schemaLocation="https://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd"/>
++    schemaLocation="../../common/xmldsig-core-schema.xsd"/>
+   <xs:import namespace="urn:oasis:names:tc:entity:xmlns:xml:catalog"
+-    schemaLocation="http://www.oasis-open.org/committees/entity/release/1.1/catalog.xsd"/>
+-  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="https://www.w3.org/1999/xlink.xsd"/>
++    schemaLocation="../../common/catalog.xsd"/>
++  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="../../common/xlink.xsd"/>
+   <xs:element name="data-stream-collection">
+     <xs:annotation>
+       <xs:documentation>Holds a collection of data streams and components.</xs:documentation>
+
+From b967d10ca3af64539367c3c6280f6dbb9fc2fd64 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Thu, 9 May 2019 09:42:21 +0200
+Subject: [PATCH 5/9] Fix schematron-version attribute in test datastreams
+
+The data-stream-collection@schematron-version attribute
+should conform to the SCAP version.
+---
+ tests/API/XCCDF/tailoring/simple-ds.xml                | 2 +-
+ tests/API/XCCDF/unittests/test_xccdf_overrides.arf.xml | 2 +-
+ tests/DS/cpe_in_ds/sds.xml                             | 2 +-
+ tests/DS/ds_sds_index/sds.xml                          | 2 +-
+ tests/DS/ds_sds_index/sds_multiple.xml                 | 2 +-
+ tests/DS/eval_benchmark_id_conflict/sds.xml            | 2 +-
+ tests/DS/eval_cpe/sds.xml                              | 2 +-
+ tests/DS/eval_invalid/sds-oval.xml                     | 2 +-
+ tests/DS/eval_invalid/sds.xml                          | 2 +-
+ tests/DS/eval_just_oval/sds.xml                        | 2 +-
+ tests/DS/eval_oval_id/sds.xml                          | 2 +-
+ tests/DS/eval_simple/sds.xml                           | 2 +-
+ tests/DS/eval_xccdf_id/sds-complex.xml                 | 2 +-
+ tests/DS/eval_xccdf_id/sds.xml                         | 2 +-
+ tests/DS/rds_index_simple/arf.xml                      | 2 +-
+ tests/DS/rds_simple/sds.xml                            | 2 +-
+ tests/DS/rds_split_simple/report-request.xml           | 2 +-
+ tests/DS/rds_testresult/sds.xml                        | 2 +-
+ tests/DS/sds_external_xccdf/sds.ds.xml                 | 2 +-
+ tests/DS/sds_external_xccdf/xccdf.sds.xml              | 2 +-
+ tests/DS/sds_tailoring/sds.ds.xml                      | 2 +-
+ tests/DS/signed/sds-signed-fake-x509.xml               | 2 +-
+ tests/DS/signed/sds-signed.xml                         | 2 +-
+ tests/DS/validate/rds-invalid.xml                      | 2 +-
+ tests/DS/validate/rds-valid.xml                        | 2 +-
+ tests/DS/validate/sds-invalid-oval.xml                 | 2 +-
+ tests/DS/validate/sds-invalid-xccdf.xml                | 2 +-
+ tests/DS/validate/sds-invalid.xml                      | 2 +-
+ tests/DS/validate/sds-valid.xml                        | 2 +-
+ tests/sce/test_sce_in_ds.xml                           | 2 +-
+ 30 files changed, 30 insertions(+), 30 deletions(-)
+
+diff --git a/tests/API/XCCDF/tailoring/simple-ds.xml b/tests/API/XCCDF/tailoring/simple-ds.xml
+index a8092096c..e5e515a70 100644
+--- a/tests/API/XCCDF/tailoring/simple-ds.xml
++++ b/tests/API/XCCDF/tailoring/simple-ds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_simple-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_simple-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_simple-xccdf.xml" scap-version="1.2" use-case="OTHER">
+     <ds:checklists>
+       <ds:component-ref id="scap_org.open-scap_cref_simple-xccdf.xml" xlink:href="#scap_org.open-scap_comp_simple-xccdf.xml">
+diff --git a/tests/API/XCCDF/unittests/test_xccdf_overrides.arf.xml b/tests/API/XCCDF/unittests/test_xccdf_overrides.arf.xml
+index 84dad69b9..3f0ca8ca8 100644
+--- a/tests/API/XCCDF/unittests/test_xccdf_overrides.arf.xml
++++ b/tests/API/XCCDF/unittests/test_xccdf_overrides.arf.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<arf:asset-report-collection xmlns:arf="http://scap.nist.gov/schema/asset-reporting-format/1.1" xmlns:core="http://scap.nist.gov/schema/reporting-core/1.1" xmlns:ai="http://scap.nist.gov/schema/asset-identification/1.1"><core:relationships xmlns:arfvocab="http://scap.nist.gov/specifications/arf/vocabulary/relationships/1.0#" xmlns:arfrel="http://scap.nist.gov/vocabulary/arf/relationships/1.0#"><core:relationship type="arfvocab:createdFor" subject="xccdf1"><core:ref>collection1</core:ref></core:relationship><core:relationship type="arfrel:isAbout" subject="xccdf1"><core:ref>asset0</core:ref></core:relationship></core:relationships><arf:report-requests><arf:report-request id="collection1"><arf:content><ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_ssg-fedora-xccdf-1.2.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-fedora-xccdf-1.2.xml" scap-version="1.2" use-case="OTHER"><ds:dictionaries><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-cpe-dictionary.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-cpe-dictionary.xml"><cat:catalog><cat:uri name="ssg-fedora-cpe-oval.xml" uri="#scap_org.open-scap_cref_output--ssg-fedora-cpe-oval.xml"/></cat:catalog></ds:component-ref></ds:dictionaries><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_ssg-fedora-xccdf-1.2.xml" xlink:href="#scap_org.open-scap_comp_ssg-fedora-xccdf-1.2.xml"><cat:catalog><cat:uri name="ssg-fedora-oval.xml" uri="#scap_org.open-scap_cref_ssg-fedora-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_ssg-fedora-oval.xml" xlink:href="#scap_org.open-scap_comp_ssg-fedora-oval.xml"/><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-cpe-oval.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-cpe-oval.xml"/><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-oval.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_ssg-fedora-oval.xml" timestamp="2014-07-01T11:31:05"><oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ind="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:unix="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:linux="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
++<arf:asset-report-collection xmlns:arf="http://scap.nist.gov/schema/asset-reporting-format/1.1" xmlns:core="http://scap.nist.gov/schema/reporting-core/1.1" xmlns:ai="http://scap.nist.gov/schema/asset-identification/1.1"><core:relationships xmlns:arfvocab="http://scap.nist.gov/specifications/arf/vocabulary/relationships/1.0#" xmlns:arfrel="http://scap.nist.gov/vocabulary/arf/relationships/1.0#"><core:relationship type="arfvocab:createdFor" subject="xccdf1"><core:ref>collection1</core:ref></core:relationship><core:relationship type="arfrel:isAbout" subject="xccdf1"><core:ref>asset0</core:ref></core:relationship></core:relationships><arf:report-requests><arf:report-request id="collection1"><arf:content><ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_ssg-fedora-xccdf-1.2.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-fedora-xccdf-1.2.xml" scap-version="1.2" use-case="OTHER"><ds:dictionaries><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-cpe-dictionary.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-cpe-dictionary.xml"><cat:catalog><cat:uri name="ssg-fedora-cpe-oval.xml" uri="#scap_org.open-scap_cref_output--ssg-fedora-cpe-oval.xml"/></cat:catalog></ds:component-ref></ds:dictionaries><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_ssg-fedora-xccdf-1.2.xml" xlink:href="#scap_org.open-scap_comp_ssg-fedora-xccdf-1.2.xml"><cat:catalog><cat:uri name="ssg-fedora-oval.xml" uri="#scap_org.open-scap_cref_ssg-fedora-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_ssg-fedora-oval.xml" xlink:href="#scap_org.open-scap_comp_ssg-fedora-oval.xml"/><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-cpe-oval.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-cpe-oval.xml"/><ds:component-ref id="scap_org.open-scap_cref_output--ssg-fedora-oval.xml" xlink:href="#scap_org.open-scap_comp_output--ssg-fedora-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_ssg-fedora-oval.xml" timestamp="2014-07-01T11:31:05"><oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ind="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:unix="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:linux="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd   http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+   <generator>
+     <oval:product_name>python</oval:product_name>
+     <oval:product_version>2.6.6</oval:product_version>
+diff --git a/tests/DS/cpe_in_ds/sds.xml b/tests/DS/cpe_in_ds/sds.xml
+index dbc57605a..a77389703 100644
+--- a/tests/DS/cpe_in_ds/sds.xml
++++ b/tests/DS/cpe_in_ds/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_ssg-fedora-xccdf-1.2.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_ssg-fedora-xccdf-1.2.xml" schematron-version="1.2">
+ 
+ 	<ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-fedora-xccdf-1.2.xml" scap-version="1.2" use-case="OTHER">
+ 		<ds:dictionaries>
+diff --git a/tests/DS/ds_sds_index/sds.xml b/tests/DS/ds_sds_index/sds.xml
+index 0e438a39d..574046d24 100644
+--- a/tests/DS/ds_sds_index/sds.xml
++++ b/tests/DS/ds_sds_index/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER" timestamp="2012-11-01T12:22:58">
+     <ds:checklists>
+       <ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml">
+diff --git a/tests/DS/ds_sds_index/sds_multiple.xml b/tests/DS/ds_sds_index/sds_multiple.xml
+index a24e6f385..069202331 100644
+--- a/tests/DS/ds_sds_index/sds_multiple.xml
++++ b/tests/DS/ds_sds_index/sds_multiple.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER">
+     <ds:checklists>
+       <ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml">
+diff --git a/tests/DS/eval_benchmark_id_conflict/sds.xml b/tests/DS/eval_benchmark_id_conflict/sds.xml
+index f3a075615..612eecb0c 100644
+--- a/tests/DS/eval_benchmark_id_conflict/sds.xml
++++ b/tests/DS/eval_benchmark_id_conflict/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_tst" scap-version="1.2" use-case="OTHER">
+     <ds:checklists>
+       <ds:component-ref id="scap_org.open-scap_cref_first-xccdf.xml" xlink:href="#scap_org.open-scap_comp_first-xccdf.xml">
+diff --git a/tests/DS/eval_cpe/sds.xml b/tests/DS/eval_cpe/sds.xml
+index fa568690a..a73403f74 100644
+--- a/tests/DS/eval_cpe/sds.xml
++++ b/tests/DS/eval_cpe/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_tst" scap-version="1.2" use-case="OTHER">
+     <ds:dictionaries>
+       <ds:component-ref id="scap_org.open-scap_cref_stub-cpe.xml" xlink:href="#scap_org.open-scap_comp_stub-cpe.xml">
+diff --git a/tests/DS/eval_invalid/sds-oval.xml b/tests/DS/eval_invalid/sds-oval.xml
+index d4e1b2900..e77e1aaea 100644
+--- a/tests/DS/eval_invalid/sds-oval.xml
++++ b/tests/DS/eval_invalid/sds-oval.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_just_oval" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_just_oval" schematron-version="1.2">
+     <ds:data-stream id="scap_org.open-scap_datastream_just_oval" scap-version="1.2" use-case="OTHER">
+         <ds:checks>
+             <ds:component-ref id="scap_org.open-scap_cref_scap-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-oval.xml"/>
+diff --git a/tests/DS/eval_invalid/sds.xml b/tests/DS/eval_invalid/sds.xml
+index f9be5cb0c..e97592354 100644
+--- a/tests/DS/eval_invalid/sds.xml
++++ b/tests/DS/eval_invalid/sds.xml
+@@ -1,3 +1,3 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_invalid.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_invalid.xml" schematron-version="1.2">
+ </ds:data-stream-collection>
+diff --git a/tests/DS/eval_just_oval/sds.xml b/tests/DS/eval_just_oval/sds.xml
+index 976c1d2ee..3093b1c4a 100644
+--- a/tests/DS/eval_just_oval/sds.xml
++++ b/tests/DS/eval_just_oval/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_just_oval" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_just_oval" schematron-version="1.2">
+     <ds:data-stream id="scap_org.open-scap_datastream_just_oval" scap-version="1.2" use-case="OTHER">
+         <ds:checks>
+             <ds:component-ref id="scap_org.open-scap_cref_scap-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-oval.xml"/>
+diff --git a/tests/DS/eval_oval_id/sds.xml b/tests/DS/eval_oval_id/sds.xml
+index 8380c68b8..ea72b4d3b 100644
+--- a/tests/DS/eval_oval_id/sds.xml
++++ b/tests/DS/eval_oval_id/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_tst" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_tst" schematron-version="1.2">
+     <ds:data-stream id="scap_org.open-scap_datastream_just_oval" scap-version="1.2" use-case="OTHER">
+         <ds:checks>
+             <ds:component-ref id="scap_org.open-scap_cref_scap-oval1.xml" xlink:href="#scap_org.open-scap_comp_scap-oval1.xml"/>
+diff --git a/tests/DS/eval_simple/sds.xml b/tests/DS/eval_simple/sds.xml
+index d3c4a6a5d..826a72629 100644
+--- a/tests/DS/eval_simple/sds.xml
++++ b/tests/DS/eval_simple/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/DS/eval_xccdf_id/sds-complex.xml b/tests/DS/eval_xccdf_id/sds-complex.xml
+index 5b69cd765..9ef6170e4 100644
+--- a/tests/DS/eval_xccdf_id/sds-complex.xml
++++ b/tests/DS/eval_xccdf_id/sds-complex.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.2">
+   <!-- This is bit more complex Datastream. The purpose is to test that scanner is able to find
+         * datastream-id scap_org.open-scap_datastream_tst2
+         * xccdf-id scap_org.open-scap_cref_second-xccdf.xml2
+diff --git a/tests/DS/eval_xccdf_id/sds.xml b/tests/DS/eval_xccdf_id/sds.xml
+index 0fcff4481..40391264f 100644
+--- a/tests/DS/eval_xccdf_id/sds.xml
++++ b/tests/DS/eval_xccdf_id/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.2">
+   <ds:data-stream id="scap_org.open-scap_datastream_tst" scap-version="1.2" use-case="OTHER">
+     <ds:checklists>
+       <ds:component-ref id="scap_org.open-scap_cref_first-xccdf.xml" xlink:href="#scap_org.open-scap_comp_first-xccdf.xml">
+diff --git a/tests/DS/rds_index_simple/arf.xml b/tests/DS/rds_index_simple/arf.xml
+index 71791c95c..d38ba05dc 100644
+--- a/tests/DS/rds_index_simple/arf.xml
++++ b/tests/DS/rds_index_simple/arf.xml
+@@ -11,7 +11,7 @@
+   <arf:report-requests>
+     <arf:report-request id="collection1">
+       <arf:content>
+-        <data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.0" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
++        <data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.2" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+           <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+             <checklists>
+               <component-ref id="scap_cdf_cref_fedora14-xccdf.xml" xlink:href="#scap_cdf_comp_fedora14-xccdf.xml">
+diff --git a/tests/DS/rds_simple/sds.xml b/tests/DS/rds_simple/sds.xml
+index 961955f06..d264aab1b 100644
+--- a/tests/DS/rds_simple/sds.xml
++++ b/tests/DS/rds_simple/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.0" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
++<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.2" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+     <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+         <checklists>
+             <component-ref id="scap_cdf_cref_fedora14-xccdf.xml" xlink:href="#scap_cdf_comp_fedora14-xccdf.xml">
+diff --git a/tests/DS/rds_split_simple/report-request.xml b/tests/DS/rds_split_simple/report-request.xml
+index 8fb3bfb75..4eb9d7da1 100644
+--- a/tests/DS/rds_split_simple/report-request.xml
++++ b/tests/DS/rds_split_simple/report-request.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.0" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
++<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.2" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+           <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+             <checklists>
+               <component-ref id="scap_cdf_cref_fedora14-xccdf.xml" xlink:href="#scap_cdf_comp_fedora14-xccdf.xml">
+diff --git a/tests/DS/rds_testresult/sds.xml b/tests/DS/rds_testresult/sds.xml
+index 961955f06..d264aab1b 100644
+--- a/tests/DS/rds_testresult/sds.xml
++++ b/tests/DS/rds_testresult/sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.0" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
++<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.2" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+     <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+         <checklists>
+             <component-ref id="scap_cdf_cref_fedora14-xccdf.xml" xlink:href="#scap_cdf_comp_fedora14-xccdf.xml">
+diff --git a/tests/DS/sds_external_xccdf/sds.ds.xml b/tests/DS/sds_external_xccdf/sds.ds.xml
+index 4531749a0..f519147ac 100644
+--- a/tests/DS/sds_external_xccdf/sds.ds.xml
++++ b/tests/DS/sds_external_xccdf/sds.ds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_test_deriving_xccdf_result_from_oval_pass.oval.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_test_deriving_xccdf_result_from_oval_pass.oval.xml" schematron-version="1.2">
+     <ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_test_deriving_xccdf_result_from_oval_pass.oval.xml" scap-version="1.2" use-case="OTHER">
+         <ds:checklists>
+             <ds:component-ref id="scap_org.open-scap_cref_xccdf.xml" xlink:href="file:xccdf.sds.xml#scap_1_comp_xccdf.xml">
+diff --git a/tests/DS/sds_external_xccdf/xccdf.sds.xml b/tests/DS/sds_external_xccdf/xccdf.sds.xml
+index 08f99a14d..ca6d946d5 100644
+--- a/tests/DS/sds_external_xccdf/xccdf.sds.xml
++++ b/tests/DS/sds_external_xccdf/xccdf.sds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_test_deriving_xccdf_result_from_oval.xccdf.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_test_deriving_xccdf_result_from_oval.xccdf.xml" schematron-version="1.2">
+     <ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_test_deriving_xccdf_result_from_oval.xccdf.xml" scap-version="1.2" use-case="OTHER">
+         <ds:checklists>
+             <ds:component-ref id="scap_org.open-scap_cref_xccdf.xml" xlink:href="#scap_1_comp_xccdf.xml" />
+diff --git a/tests/DS/sds_tailoring/sds.ds.xml b/tests/DS/sds_tailoring/sds.ds.xml
+index 793f444c2..92763b63f 100644
+--- a/tests/DS/sds_tailoring/sds.ds.xml
++++ b/tests/DS/sds_tailoring/sds.ds.xml
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ 
+-<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.0" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
++<data-stream-collection xmlns="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_cdf_collection_fedora.zip" schematron-version="1.2" xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+ 
+   <!-- Data Stream with XCCDF checklist -->
+   <data-stream id="scap_com.example_datastream_with_checklist" scap-version="1.2" timestamp="2016-09-26T15:00:00" use-case="CONFIGURATION">
+diff --git a/tests/DS/signed/sds-signed-fake-x509.xml b/tests/DS/signed/sds-signed-fake-x509.xml
+index 0431a42ca..592bfb3c2 100644
+--- a/tests/DS/signed/sds-signed-fake-x509.xml
++++ b/tests/DS/signed/sds-signed-fake-x509.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/DS/signed/sds-signed.xml b/tests/DS/signed/sds-signed.xml
+index 1863e5f18..3e862dd82 100644
+--- a/tests/DS/signed/sds-signed.xml
++++ b/tests/DS/signed/sds-signed.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/DS/validate/rds-invalid.xml b/tests/DS/validate/rds-invalid.xml
+index 7351e0cb2..f98d13ada 100644
+--- a/tests/DS/validate/rds-invalid.xml
++++ b/tests/DS/validate/rds-invalid.xml
+@@ -19,7 +19,7 @@
+     xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+-    id="scap_cdf_collection_fedora.zip" schematron-version="1.0"
++    id="scap_cdf_collection_fedora.zip" schematron-version="1.2"
+     xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+     <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+         <dictionaries>
+diff --git a/tests/DS/validate/rds-valid.xml b/tests/DS/validate/rds-valid.xml
+index e08672a3a..22dadccbf 100644
+--- a/tests/DS/validate/rds-valid.xml
++++ b/tests/DS/validate/rds-valid.xml
+@@ -20,7 +20,7 @@
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     id="scap_cdf_collection_fedora.zip"
+-    schematron-version="1.0"
++    schematron-version="1.2"
+     xsi:schemaLocation="http://scap.nist.gov/schema/scap/source/1.2 http://scap.nist.gov/schema/scap/1.2/scap-source-data-stream_1.2-draft.xsd">
+     <data-stream id="scap_cdf_datastream_fedora.zip" scap-version="1.2" timestamp="2012-06-05T07:33:31" use-case="OVAL_ONLY">
+         <dictionaries>
+diff --git a/tests/DS/validate/sds-invalid-oval.xml b/tests/DS/validate/sds-invalid-oval.xml
+index c9ac98b48..e8be9abcf 100644
+--- a/tests/DS/validate/sds-invalid-oval.xml
++++ b/tests/DS/validate/sds-invalid-oval.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/DS/validate/sds-invalid-xccdf.xml b/tests/DS/validate/sds-invalid-xccdf.xml
+index 64df3a13d..cf3017070 100644
+--- a/tests/DS/validate/sds-invalid-xccdf.xml
++++ b/tests/DS/validate/sds-invalid-xccdf.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+ on Linux.</xccdf:description>
+diff --git a/tests/DS/validate/sds-invalid.xml b/tests/DS/validate/sds-invalid.xml
+index 3a7d67ca6..51a2ed03a 100644
+--- a/tests/DS/validate/sds-invalid.xml
++++ b/tests/DS/validate/sds-invalid.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/DS/validate/sds-valid.xml b/tests/DS/validate/sds-valid.xml
+index d3c4a6a5d..826a72629 100644
+--- a/tests/DS/validate/sds-valid.xml
++++ b/tests/DS/validate/sds-valid.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.0"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_scap-fedora14-xccdf.xml" schematron-version="1.2"><ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_scap-fedora14-xccdf.xml" scap-version="1.2" use-case="OTHER"><ds:checklists><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-xccdf.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-xccdf.xml"><cat:catalog><cat:uri name="scap-fedora14-oval.xml" uri="#scap_org.open-scap_cref_scap-fedora14-oval.xml"/></cat:catalog></ds:component-ref></ds:checklists><ds:checks><ds:component-ref id="scap_org.open-scap_cref_scap-fedora14-oval.xml" xlink:href="#scap_org.open-scap_comp_scap-fedora14-oval.xml"/></ds:checks></ds:data-stream><ds:component id="scap_org.open-scap_comp_scap-fedora14-xccdf.xml" timestamp="2012-07-20T12:22:58"><xccdf:Benchmark xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="xccdf_cdf_benchmark_scap-fedora14-xccdf.xml" resolved="1" style="SCAP_1.2" xml:lang="en" xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd">
+             <xccdf:status date="2011-10-12">draft</xccdf:status>
+             <xccdf:title>Example of SCAP Security Guidance</xccdf:title>
+             <xccdf:description>This example security guidance has been created to demonstrate SCAP functionality
+diff --git a/tests/sce/test_sce_in_ds.xml b/tests/sce/test_sce_in_ds.xml
+index 14e0876e6..62c45781c 100644
+--- a/tests/sce/test_sce_in_ds.xml
++++ b/tests/sce/test_sce_in_ds.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_all-resolved-xccdf-dummyoval.xml" schematron-version="1.0">
++<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_all-resolved-xccdf-dummyoval.xml" schematron-version="1.2">
+ 	<ds:data-stream id="scap_org.open-scap_datastream_from_xccdf_all-resolved-xccdf-dummyoval.xml" scap-version="1.2" use-case="OTHER">
+ 	<ds:checklists>
+ 		<ds:component-ref id="scap_org.open-scap_cref_all-resolved-xccdf-dummyoval.xml" xlink:href="#scap_org.open-scap_comp_all-resolved-xccdf-dummyoval.xml">
+
+From 190ca9d3db7049879be4308c5194f2406cc5f70b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Thu, 9 May 2019 09:44:06 +0200
+Subject: [PATCH 6/9] Detect source datastream version
+
+Instead of hard-coding SCAP 1.2, we will use
+data-stream-collection@schematron-version attribute to detect the SCAP
+version of datastream and we will choose the right XML schema
+accordingly. So far, only 1.2 and 1.3 datastreams are supported.
+---
+ src/DS/sds.c              | 26 ++++++++++++++++++++++++++
+ src/DS/sds_priv.h         |  4 ++++
+ src/source/Makefile.am    |  1 +
+ src/source/oscap_source.c |  3 ++-
+ src/source/validate.c     |  1 +
+ 5 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/src/DS/sds.c b/src/DS/sds.c
+index b7c33a2e5..c4271b26e 100644
+--- a/src/DS/sds.c
++++ b/src/DS/sds.c
+@@ -1265,3 +1265,29 @@ int ds_sds_compose_from_xccdf(const char *xccdf_file, const char *target_datastr
+ 	xmlFreeDoc(doc);
+ 	return 0;
+ }
++
++char *ds_sds_detect_version(xmlTextReader *reader)
++{
++	/* find root element */
++	while (xmlTextReaderRead(reader) == 1 && xmlTextReaderNodeType(reader) != XML_READER_TYPE_ELEMENT)
++		;
++
++	char *element_name = (char *) xmlTextReaderConstLocalName(reader);
++	if (!element_name) {
++		oscap_setxmlerr(xmlGetLastError());
++		return NULL;
++	}
++	if (strcmp(element_name, "data-stream-collection")) {
++		oscap_seterr(OSCAP_EFAMILY_OSCAP,
++			"Expected root element name for SCAP source datastream is" \
++			"'data-stream-collection' but actual root element name is '%s'.",
++			element_name);
++		return NULL;
++	}
++	char *schematron_version = (char *) xmlTextReaderGetAttribute(reader, BAD_CAST "schematron-version");
++	if (!schematron_version) {
++		oscap_setxmlerr(xmlGetLastError());
++		return NULL;
++	}
++	return schematron_version;
++}
+diff --git a/src/DS/sds_priv.h b/src/DS/sds_priv.h
+index 0ba2e8cb7..39c36da9f 100644
+--- a/src/DS/sds_priv.h
++++ b/src/DS/sds_priv.h
+@@ -26,6 +26,7 @@
+ #endif
+ 
+ #include <libxml/tree.h>
++#include <libxml/xmlreader.h>
+ #include "common/public/oscap.h"
+ #include "common/util.h"
+ #include "ds_sds_session.h"
+@@ -45,5 +45,8 @@
+ xmlDocPtr ds_sds_compose_xmlDoc_from_xccdf(const char *xccdf_file);
+ xmlDocPtr ds_sds_compose_xmlDoc_from_xccdf_source(struct oscap_source *xccdf_source);
+ 
++char *ds_sds_detect_version(xmlTextReader *reader);
++
+ OSCAP_HIDDEN_END;
++
+ #endif
+diff --git a/src/source/Makefile.am b/src/source/Makefile.am
+index 446bf4596..ad37ba6f6 100644
+--- a/src/source/Makefile.am
++++ b/src/source/Makefile.am
+@@ -19,6 +19,7 @@ liboscapsource_la_CPPFLAGS  = \
+ 	@xml2_CFLAGS@ @xslt_CFLAGS@ @exslt_CFLAGS@ \
+ 	-I$(srcdir)/public \
+ 	-I$(top_srcdir)/src \
++	-I$(top_srcdir)/src/DS/public \
+ 	-I$(top_srcdir)/src/CPE/public \
+ 	-I$(top_srcdir)/src/OVAL/probes/SEAP/public \
+ 	-I$(top_srcdir)/src/common/public
+diff --git a/src/source/oscap_source.c b/src/source/oscap_source.c
+index 3b7282ed3..228dc049b 100644
+--- a/src/source/oscap_source.c
++++ b/src/source/oscap_source.c
+@@ -51,6 +51,7 @@
+ #include "source/validate_priv.h"
+ #include "XCCDF/elements.h"
+ #include "XCCDF/public/xccdf_benchmark.h"
++#include "DS/sds_priv.h"
+ 
+ typedef enum oscap_source_type {
+ 	OSCAP_SRC_FROM_USER_XML_FILE = 1,               ///< The source originated from XML file supplied by user
+@@ -360,7 +361,7 @@ const char *oscap_source_get_schema_version(struct oscap_source *source)
+ 		}
+ 		switch (oscap_source_get_scap_type(source)) {
+ 			case OSCAP_DOCUMENT_SDS:
+-				source->origin.version = oscap_strdup("1.2");
++				source->origin.version = ds_sds_detect_version(reader);
+ 				break;
+ 			case OSCAP_DOCUMENT_ARF:
+ 				source->origin.version = oscap_strdup("1.1");
+diff --git a/src/source/validate.c b/src/source/validate.c
+index 4c7aa98c4..730d44b2f 100644
+--- a/src/source/validate.c
++++ b/src/source/validate.c
+@@ -220,6 +220,7 @@ struct oscap_schema_table_entry OSCAP_SCHEMAS_TABLE[] = {
+ 	{OSCAP_DOCUMENT_XCCDF_TAILORING,	"1.2",	"xccdf/1.2/xccdf_1.2.xsd"},
+ 	{OSCAP_DOCUMENT_XCCDF_TAILORING,	"1.1",	"xccdf/1.1-tailoring/xccdf-1.1-tailoring.xsd"}, // unofficial openscap extension!
+ 	{OSCAP_DOCUMENT_SDS,                "1.2",  "sds/1.2/scap-source-data-stream_1.2.xsd"},
++	{OSCAP_DOCUMENT_SDS,                "1.3",  "sds/1.3/scap-source-data-stream_1.3.xsd"},
+ 	{OSCAP_DOCUMENT_ARF,                "1.1",  "arf/1.1/asset-reporting-format_1.1.0.xsd"},
+ 	{OSCAP_DOCUMENT_CPE_DICTIONARY,		"2.0", "cpe/2.0/cpe-dictionary_2.0.xsd"},
+ 	{OSCAP_DOCUMENT_CPE_DICTIONARY,		"2.1", "cpe/2.1/cpe-dictionary_2.1.xsd"},
+
+From 8457c924957f16b43921ed488a0268d868d94ac4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Fri, 10 May 2019 09:48:46 +0200
+Subject: [PATCH 7/9] Add a simple test for oscap info
+
+This test tests if `oscap` is able to detect the version
+of SCAP source datastream (if DS is SCAP 1.2 or 1.3).
+---
+ configure.ac                                  |  1 +
+ tests/DS/Makefile.am                          |  2 +-
+ tests/DS/sds_detect_version/Makefile.am       | 13 +++++
+ tests/DS/sds_detect_version/scap-1.2-ds.xml   | 51 +++++++++++++++++++
+ tests/DS/sds_detect_version/scap-1.3-ds.xml   | 51 +++++++++++++++++++
+ .../sds_detect_version/test_detect_version.sh | 27 ++++++++++
+ 7 files changed, 145 insertions(+), 1 deletion(-)
+ create mode 100644 tests/DS/sds_detect_version/Makefile.am
+ create mode 100644 tests/DS/sds_detect_version/scap-1.2-ds.xml
+ create mode 100644 tests/DS/sds_detect_version/scap-1.3-ds.xml
+ create mode 100755 tests/DS/sds_detect_version/test_detect_version.sh
+
+diff --git a/configure.ac b/configure.ac
+index dd02507da..91fba1390 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1548,6 +1548,7 @@ AC_CONFIG_FILES([Makefile
+                  src/DS/Makefile
+                  tests/DS/Makefile
+                  tests/DS/ds_sds_index/Makefile
++                 tests/DS/sds_detect_version/Makefile
+                  tests/DS/signed/Makefile
+                  tests/DS/validate/Makefile
+ 
+diff --git a/tests/DS/Makefile.am b/tests/DS/Makefile.am
+index ea742386d..e0f63348c 100644
+--- a/tests/DS/Makefile.am
++++ b/tests/DS/Makefile.am
+@@ -60,4 +60,4 @@ EXTRA_DIST = test_ds.sh \
+ 		sds_subdir/subdir/scap-fedora14-xccdf.xml \
+ 		sds_tailoring/sds.ds.xml
+ 
+-SUBDIRS = ds_sds_index signed validate
++SUBDIRS = ds_sds_index signed validate sds_detect_version
+diff --git a/tests/DS/sds_detect_version/Makefile.am b/tests/DS/sds_detect_version/Makefile.am
+new file mode 100644
+index 000000000..087888742
+--- /dev/null
++++ b/tests/DS/sds_detect_version/Makefile.am
+@@ -0,0 +1,13 @@
++DISTCLEANFILES = *.log *.results oscap_debug.log.*
++CLEANFILES = *.log *.results oscap_debug.log.*
++
++TESTS_ENVIRONMENT= \
++		builddir=$(top_builddir) \
++		OSCAP_FULL_VALIDATION=1 \
++		$(top_builddir)/run
++
++TESTS = test_detect_version.sh
++
++EXTRA_DIST = test_detect_version.sh \
++			 scap-1.2-ds.xml \
++			 scap-1.3-ds.xml
+diff --git a/tests/DS/sds_detect_version/scap-1.2-ds.xml b/tests/DS/sds_detect_version/scap-1.2-ds.xml
+new file mode 100644
+index 000000000..12e4954ae
+--- /dev/null
++++ b/tests/DS/sds_detect_version/scap-1.2-ds.xml
+@@ -0,0 +1,51 @@
++<?xml version="1.0"?>
++<ns0:data-stream-collection xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:ns0="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ns1="http://www.w3.org/1999/xlink" xmlns:ns10="http://checklists.nist.gov/xccdf/1.2" xmlns:ns13="http://cpe.mitre.org/dictionary/2.0" xmlns:ns2="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:ns3="http://scap.nist.gov/schema/ocil/2.0" xmlns:ns4="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:ns6="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ns7="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:ns8="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:ns9="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_org.open-scap_collection_from_xccdf_ssg-rhel8-xccdf-1.2.xml" schematron-version="1.2">
++  <ns0:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-rhel8-xccdf-1.2.xml" scap-version="1.2" use-case="OTHER">
++    <ns0:checks>
++      <ns0:component-ref id="scap_org.open-scap_cref_ssg-rhel8-oval.xml" ns1:href="#scap_org.open-scap_comp_ssg-rhel8-oval.xml"/>
++    </ns0:checks>
++  </ns0:data-stream>
++  <ns0:component id="scap_org.open-scap_comp_ssg-rhel8-oval.xml" timestamp="2019-05-10T08:18:44">
++    <ns4:oval_definitions xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
++      <ns4:generator>
++        <ns6:product_name>combine_ovals.py from SCAP Security Guide</ns6:product_name>
++        <ns6:product_version>ssg: [0, 1, 44], python: 3.7.3</ns6:product_version>
++        <ns6:schema_version>5.10</ns6:schema_version>
++        <ns6:timestamp>2019-05-10T06:18:18</ns6:timestamp>
++      </ns4:generator>
++      <ns4:definitions>
++        <ns4:definition class="inventory" id="oval:ssg-installed_OS_is_rhel8:def:1" version="1">
++          <ns4:metadata>
++            <ns4:title>Red Hat Enterprise Linux 8</ns4:title>
++            <ns4:affected family="unix">
++              <ns4:platform>Red Hat Enterprise Linux 8</ns4:platform>
++            </ns4:affected>
++            <ns4:reference ref_id="cpe:/o:redhat:enterprise_linux:8" source="CPE"/>
++            <ns4:description>The operating system installed on the system is
++      Red Hat Enterprise Linux 8</ns4:description>
++            <ns4:reference ref_id="installed_OS_is_rhel8" source="ssg"/>
++          </ns4:metadata>
++          <ns4:criteria>
++            <ns4:criterion comment="RHEL 8 is installed" test_ref="oval:ssg-test_rhel8:tst:1"/>
++          </ns4:criteria>
++        </ns4:definition>
++      </ns4:definitions>
++      <ns4:tests>
++        <ns9:rpminfo_test check="all" check_existence="at_least_one_exists" comment="redhat-release is version 8" id="oval:ssg-test_rhel8:tst:1" version="1">
++          <ns9:object object_ref="oval:ssg-obj_rhel8:obj:1"/>
++          <ns9:state state_ref="oval:ssg-state_rhel8:ste:1"/>
++        </ns9:rpminfo_test>
++      </ns4:tests>
++      <ns4:objects>
++        <ns9:rpminfo_object id="oval:ssg-obj_rhel8:obj:1" version="1">
++          <ns9:name>redhat-release</ns9:name>
++        </ns9:rpminfo_object>
++      </ns4:objects>
++      <ns4:states>
++        <ns9:rpminfo_state id="oval:ssg-state_rhel8:ste:1" version="1">
++          <ns9:version operation="pattern match">^8.*$</ns9:version>
++        </ns9:rpminfo_state>
++      </ns4:states>
++    </ns4:oval_definitions>
++  </ns0:component>
++</ns0:data-stream-collection>
+diff --git a/tests/DS/sds_detect_version/scap-1.3-ds.xml b/tests/DS/sds_detect_version/scap-1.3-ds.xml
+new file mode 100644
+index 000000000..5d4af29a3
+--- /dev/null
++++ b/tests/DS/sds_detect_version/scap-1.3-ds.xml
+@@ -0,0 +1,51 @@
++<?xml version="1.0"?>
++<ns0:data-stream-collection xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:ns0="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ns1="http://www.w3.org/1999/xlink" xmlns:ns10="http://checklists.nist.gov/xccdf/1.2" xmlns:ns13="http://cpe.mitre.org/dictionary/2.0" xmlns:ns2="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:ns3="http://scap.nist.gov/schema/ocil/2.0" xmlns:ns4="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:ns6="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ns7="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:ns8="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:ns9="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_org.open-scap_collection_from_xccdf_ssg-rhel8-xccdf-1.2.xml" schematron-version="1.3">
++  <ns0:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-rhel8-xccdf-1.2.xml" scap-version="1.3" use-case="OTHER">
++    <ns0:checks>
++      <ns0:component-ref id="scap_org.open-scap_cref_ssg-rhel8-oval.xml" ns1:href="#scap_org.open-scap_comp_ssg-rhel8-oval.xml"/>
++    </ns0:checks>
++  </ns0:data-stream>
++  <ns0:component id="scap_org.open-scap_comp_ssg-rhel8-oval.xml" timestamp="2019-05-10T08:18:44">
++    <ns4:oval_definitions xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
++      <ns4:generator>
++        <ns6:product_name>combine_ovals.py from SCAP Security Guide</ns6:product_name>
++        <ns6:product_version>ssg: [0, 1, 44], python: 3.7.3</ns6:product_version>
++        <ns6:schema_version>5.11</ns6:schema_version>
++        <ns6:timestamp>2019-05-10T06:18:18</ns6:timestamp>
++      </ns4:generator>
++      <ns4:definitions>
++        <ns4:definition class="inventory" id="oval:ssg-installed_OS_is_rhel8:def:1" version="1">
++          <ns4:metadata>
++            <ns4:title>Red Hat Enterprise Linux 8</ns4:title>
++            <ns4:affected family="unix">
++              <ns4:platform>Red Hat Enterprise Linux 8</ns4:platform>
++            </ns4:affected>
++            <ns4:reference ref_id="cpe:/o:redhat:enterprise_linux:8" source="CPE"/>
++            <ns4:description>The operating system installed on the system is
++      Red Hat Enterprise Linux 8</ns4:description>
++            <ns4:reference ref_id="installed_OS_is_rhel8" source="ssg"/>
++          </ns4:metadata>
++          <ns4:criteria>
++            <ns4:criterion comment="RHEL 8 is installed" test_ref="oval:ssg-test_rhel8:tst:1"/>
++          </ns4:criteria>
++        </ns4:definition>
++      </ns4:definitions>
++      <ns4:tests>
++        <ns9:rpminfo_test check="all" check_existence="at_least_one_exists" comment="redhat-release is version 8" id="oval:ssg-test_rhel8:tst:1" version="1">
++          <ns9:object object_ref="oval:ssg-obj_rhel8:obj:1"/>
++          <ns9:state state_ref="oval:ssg-state_rhel8:ste:1"/>
++        </ns9:rpminfo_test>
++      </ns4:tests>
++      <ns4:objects>
++        <ns9:rpminfo_object id="oval:ssg-obj_rhel8:obj:1" version="1">
++          <ns9:name>redhat-release</ns9:name>
++        </ns9:rpminfo_object>
++      </ns4:objects>
++      <ns4:states>
++        <ns9:rpminfo_state id="oval:ssg-state_rhel8:ste:1" version="1">
++          <ns9:version operation="pattern match">^8.*$</ns9:version>
++        </ns9:rpminfo_state>
++      </ns4:states>
++    </ns4:oval_definitions>
++  </ns0:component>
++</ns0:data-stream-collection>
+diff --git a/tests/DS/sds_detect_version/test_detect_version.sh b/tests/DS/sds_detect_version/test_detect_version.sh
+new file mode 100755
+index 000000000..607aac261
+--- /dev/null
++++ b/tests/DS/sds_detect_version/test_detect_version.sh
+@@ -0,0 +1,27 @@
++#!/bin/bash
++
++# Copyright 2019 Red Hat Inc., Durham, North Carolina.
++# All Rights Reserved.
++#
++# OpenSCAP Test Suite
++#
++# Authors:
++#      Jan Černý <jcerny@redhat.com>
++
++. $builddir/tests/test_common.sh
++
++set -e -o pipefail
++
++function test_oscap_info {
++	version="$1"
++	stdout="$(mktemp)"
++	stderr="$(mktemp)"
++	$OSCAP info $srcdir/scap-$version-ds.xml > $stdout 2> $stderr
++	[ ! -s $stderr ]
++	grep -q "Version: $version" $stdout
++	rm $stdout
++	rm $stderr
++}
++
++test_oscap_info "1.2"
++test_oscap_info "1.3"
+
+From 475b387ad359549645b9d7595eefdeea104cdf81 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Fri, 10 May 2019 10:11:59 +0200
+Subject: [PATCH 8/9] Add simple tests for validating SCAP 1.3 datastreams
+
+Tests if `oscap ds sds-validate` can validate SCAP 1.3 datastreams
+against XML schema. The test uses a simple valid datastream and
+a simple invalid datastream.
+---
+ tests/DS/validate/Makefile.am         | 14 ++++----
+ tests/DS/validate/all.sh              |  2 ++
+ tests/DS/validate/sds-1.3-invalid.xml | 48 +++++++++++++++++++++++++
+ tests/DS/validate/sds-1.3-valid.xml   | 51 +++++++++++++++++++++++++++
+ 4 files changed, 109 insertions(+), 6 deletions(-)
+ create mode 100644 tests/DS/validate/sds-1.3-invalid.xml
+ create mode 100644 tests/DS/validate/sds-1.3-valid.xml
+
+diff --git a/tests/DS/validate/Makefile.am b/tests/DS/validate/Makefile.am
+index 0ebe28559..6cca84f98 100644
+--- a/tests/DS/validate/Makefile.am
++++ b/tests/DS/validate/Makefile.am
+@@ -9,9 +9,11 @@ TESTS_ENVIRONMENT= \
+ TESTS = all.sh
+ 
+ EXTRA_DIST = all.sh \
+-			  sds-valid.xml \
+-			  sds-invalid.xml \
+-			  sds-invalid-xccdf.xml \
+-			  sds-invalid-oval.xml \
+-			  rds-valid.xml \
+-			  rds-invalid.xml
++			 rds-invalid.xml \
++			 rds-valid.xml \
++			 sds-1.3-invalid.xml \
++			 sds-1.3-valid.xml \
++			 sds-invalid-oval.xml \
++			 sds-invalid-xccdf.xml \
++			 sds-invalid.xml \
++			 sds-valid.xml
+diff --git a/tests/DS/validate/all.sh b/tests/DS/validate/all.sh
+index b6c2de011..8d5845dff 100755
+--- a/tests/DS/validate/all.sh
++++ b/tests/DS/validate/all.sh
+@@ -18,7 +18,9 @@ function test_validation {
+ 
+ test_init test_validation.log
+ test_run "valid-sds" test_validation sds sds-valid.xml 0
++test_run "valid-1.3-sds" test_validation sds sds-1.3-valid.xml 0
+ test_run "invalid-sds" test_validation sds sds-invalid.xml 1
++test_run "invalid-1.3-sds" test_validation sds sds-1.3-invalid.xml 1
+ test_run "invalid-xccdf-sds" test_validation sds sds-invalid-xccdf.xml 1
+ test_run "invalid-oval-sds" test_validation sds sds-invalid-oval.xml 1
+ 
+diff --git a/tests/DS/validate/sds-1.3-invalid.xml b/tests/DS/validate/sds-1.3-invalid.xml
+new file mode 100644
+index 000000000..0f540925f
+--- /dev/null
++++ b/tests/DS/validate/sds-1.3-invalid.xml
+@@ -0,0 +1,48 @@
++<?xml version="1.0"?>
++<ns0:data-stream-collection xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:ns0="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ns1="http://www.w3.org/1999/xlink" xmlns:ns10="http://checklists.nist.gov/xccdf/1.2" xmlns:ns13="http://cpe.mitre.org/dictionary/2.0" xmlns:ns2="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:ns3="http://scap.nist.gov/schema/ocil/2.0" xmlns:ns4="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:ns6="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ns7="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:ns8="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:ns9="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_org.open-scap_collection_from_xccdf_ssg-rhel8-xccdf-1.2.xml" schematron-version="1.3">
++  <ns0:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-rhel8-xccdf-1.2.xml" scap-version="1.3" use-case="OTHER">
++  </ns0:data-stream>
++  <ns0:component id="scap_org.open-scap_comp_ssg-rhel8-oval.xml" timestamp="2019-05-10T08:18:44">
++    <ns4:oval_definitions xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
++      <ns4:generator>
++        <ns6:product_name>combine_ovals.py from SCAP Security Guide</ns6:product_name>
++        <ns6:product_version>ssg: [0, 1, 44], python: 3.7.3</ns6:product_version>
++        <ns6:schema_version>5.11</ns6:schema_version>
++        <ns6:timestamp>2019-05-10T06:18:18</ns6:timestamp>
++      </ns4:generator>
++      <ns4:definitions>
++        <ns4:definition class="inventory" id="oval:ssg-installed_OS_is_rhel8:def:1" version="1">
++          <ns4:metadata>
++            <ns4:title>Red Hat Enterprise Linux 8</ns4:title>
++            <ns4:affected family="unix">
++              <ns4:platform>Red Hat Enterprise Linux 8</ns4:platform>
++            </ns4:affected>
++            <ns4:reference ref_id="cpe:/o:redhat:enterprise_linux:8" source="CPE"/>
++            <ns4:description>The operating system installed on the system is
++      Red Hat Enterprise Linux 8</ns4:description>
++            <ns4:reference ref_id="installed_OS_is_rhel8" source="ssg"/>
++          </ns4:metadata>
++          <ns4:criteria>
++            <ns4:criterion comment="RHEL 8 is installed" test_ref="oval:ssg-test_rhel8:tst:1"/>
++          </ns4:criteria>
++        </ns4:definition>
++      </ns4:definitions>
++      <ns4:tests>
++        <ns9:rpminfo_test check="all" check_existence="at_least_one_exists" comment="redhat-release is version 8" id="oval:ssg-test_rhel8:tst:1" version="1">
++          <ns9:object object_ref="oval:ssg-obj_rhel8:obj:1"/>
++          <ns9:state state_ref="oval:ssg-state_rhel8:ste:1"/>
++        </ns9:rpminfo_test>
++      </ns4:tests>
++      <ns4:objects>
++        <ns9:rpminfo_object id="oval:ssg-obj_rhel8:obj:1" version="1">
++          <ns9:name>redhat-release</ns9:name>
++        </ns9:rpminfo_object>
++      </ns4:objects>
++      <ns4:states>
++        <ns9:rpminfo_state id="oval:ssg-state_rhel8:ste:1" version="1">
++          <ns9:version operation="pattern match">^8.*$</ns9:version>
++        </ns9:rpminfo_state>
++      </ns4:states>
++    </ns4:oval_definitions>
++  </ns0:component>
++</ns0:data-stream-collection>
+diff --git a/tests/DS/validate/sds-1.3-valid.xml b/tests/DS/validate/sds-1.3-valid.xml
+new file mode 100644
+index 000000000..5d4af29a3
+--- /dev/null
++++ b/tests/DS/validate/sds-1.3-valid.xml
+@@ -0,0 +1,51 @@
++<?xml version="1.0"?>
++<ns0:data-stream-collection xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:ns0="http://scap.nist.gov/schema/scap/source/1.2" xmlns:ns1="http://www.w3.org/1999/xlink" xmlns:ns10="http://checklists.nist.gov/xccdf/1.2" xmlns:ns13="http://cpe.mitre.org/dictionary/2.0" xmlns:ns2="urn:oasis:names:tc:entity:xmlns:xml:catalog" xmlns:ns3="http://scap.nist.gov/schema/ocil/2.0" xmlns:ns4="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:ns6="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:ns7="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:ns8="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:ns9="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="scap_org.open-scap_collection_from_xccdf_ssg-rhel8-xccdf-1.2.xml" schematron-version="1.3">
++  <ns0:data-stream id="scap_org.open-scap_datastream_from_xccdf_ssg-rhel8-xccdf-1.2.xml" scap-version="1.3" use-case="OTHER">
++    <ns0:checks>
++      <ns0:component-ref id="scap_org.open-scap_cref_ssg-rhel8-oval.xml" ns1:href="#scap_org.open-scap_comp_ssg-rhel8-oval.xml"/>
++    </ns0:checks>
++  </ns0:data-stream>
++  <ns0:component id="scap_org.open-scap_comp_ssg-rhel8-oval.xml" timestamp="2019-05-10T08:18:44">
++    <ns4:oval_definitions xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd         http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
++      <ns4:generator>
++        <ns6:product_name>combine_ovals.py from SCAP Security Guide</ns6:product_name>
++        <ns6:product_version>ssg: [0, 1, 44], python: 3.7.3</ns6:product_version>
++        <ns6:schema_version>5.11</ns6:schema_version>
++        <ns6:timestamp>2019-05-10T06:18:18</ns6:timestamp>
++      </ns4:generator>
++      <ns4:definitions>
++        <ns4:definition class="inventory" id="oval:ssg-installed_OS_is_rhel8:def:1" version="1">
++          <ns4:metadata>
++            <ns4:title>Red Hat Enterprise Linux 8</ns4:title>
++            <ns4:affected family="unix">
++              <ns4:platform>Red Hat Enterprise Linux 8</ns4:platform>
++            </ns4:affected>
++            <ns4:reference ref_id="cpe:/o:redhat:enterprise_linux:8" source="CPE"/>
++            <ns4:description>The operating system installed on the system is
++      Red Hat Enterprise Linux 8</ns4:description>
++            <ns4:reference ref_id="installed_OS_is_rhel8" source="ssg"/>
++          </ns4:metadata>
++          <ns4:criteria>
++            <ns4:criterion comment="RHEL 8 is installed" test_ref="oval:ssg-test_rhel8:tst:1"/>
++          </ns4:criteria>
++        </ns4:definition>
++      </ns4:definitions>
++      <ns4:tests>
++        <ns9:rpminfo_test check="all" check_existence="at_least_one_exists" comment="redhat-release is version 8" id="oval:ssg-test_rhel8:tst:1" version="1">
++          <ns9:object object_ref="oval:ssg-obj_rhel8:obj:1"/>
++          <ns9:state state_ref="oval:ssg-state_rhel8:ste:1"/>
++        </ns9:rpminfo_test>
++      </ns4:tests>
++      <ns4:objects>
++        <ns9:rpminfo_object id="oval:ssg-obj_rhel8:obj:1" version="1">
++          <ns9:name>redhat-release</ns9:name>
++        </ns9:rpminfo_object>
++      </ns4:objects>
++      <ns4:states>
++        <ns9:rpminfo_state id="oval:ssg-state_rhel8:ste:1" version="1">
++          <ns9:version operation="pattern match">^8.*$</ns9:version>
++        </ns9:rpminfo_state>
++      </ns4:states>
++    </ns4:oval_definitions>
++  </ns0:component>
++</ns0:data-stream-collection>
+
+From 09d00acda9153c4012dca5a05ee226fc05ba2080 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Mon, 27 May 2019 10:58:47 +0200
+Subject: [PATCH 9/9] Change OVAL version to 5.11.2
+
+The SCAP 1.3 source datastream schema imports OVAL 5.11.2.
+---
+ tests/DS/sds_detect_version/scap-1.3-ds.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/DS/sds_detect_version/scap-1.3-ds.xml b/tests/DS/sds_detect_version/scap-1.3-ds.xml
+index 5d4af29a3..2e4ff31b0 100644
+--- a/tests/DS/sds_detect_version/scap-1.3-ds.xml
++++ b/tests/DS/sds_detect_version/scap-1.3-ds.xml
+@@ -10,7 +10,7 @@
+       <ns4:generator>
+         <ns6:product_name>combine_ovals.py from SCAP Security Guide</ns6:product_name>
+         <ns6:product_version>ssg: [0, 1, 44], python: 3.7.3</ns6:product_version>
+-        <ns6:schema_version>5.11</ns6:schema_version>
++        <ns6:schema_version>5.11.2</ns6:schema_version>
+         <ns6:timestamp>2019-05-10T06:18:18</ns6:timestamp>
+       </ns4:generator>
+       <ns4:definitions>

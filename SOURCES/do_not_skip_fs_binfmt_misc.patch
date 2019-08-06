@@ -1,0 +1,33 @@
+From 7774511d5438e5bbfc0d0142b7656da0498e7126 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Wed, 29 May 2019 14:54:02 +0200
+Subject: [PATCH] Do not skip 'fs.binfmt_misc.status' by sysctl probe
+
+Directory /proc/sys/fs/binfmt_misc is a separate file system,
+mounted by systemd-automout and is represented by an autofs
+entry in /etc/mtab. /proc/sys/fs/binfmt_misc is mounted
+on demand when accessed. If accessed the first time, we don't
+have a way to determine the if the autofs is remote or local.
+See 309f8230d67f229b6091876c3ace62370fb3d451.
+However, we don't see a reason why not to traverse the whole
+/proc/sys regardless the type of file systems mounted there.
+---
+ src/OVAL/probes/unix/sysctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/OVAL/probes/unix/sysctl.c b/src/OVAL/probes/unix/sysctl.c
+index 3001bfd76..bc53b43fc 100644
+--- a/src/OVAL/probes/unix/sysctl.c
++++ b/src/OVAL/probes/unix/sysctl.c
+@@ -76,7 +76,7 @@ int probe_main(probe_ctx *ctx, void *probe_arg)
+          */
+         ent_attrs = probe_attr_creat("max_depth",           r0 = SEXP_string_newf("%d", PROC_SYS_MAXDEPTH),
+                                      "recurse_direction",   r1 = SEXP_string_new("down", 4),
+-                                     "recurse_file_system", r2 = SEXP_string_new("local", 7),
++                                     "recurse_file_system", r2 = SEXP_string_new("all", 3),
+                                      "recurse", r3 = SEXP_string_new("symlinks and directories", 24),
+                                      NULL);
+         bh_entity = probe_ent_creat1("behaviors", ent_attrs, NULL);
+-- 
+2.20.1
+

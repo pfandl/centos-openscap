@@ -1,0 +1,51 @@
+From 919170300b1d05a807ad59c22ef6c4ab48c2f1c9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Tue, 21 May 2019 13:21:45 +0200
+Subject: [PATCH] Fix invalid OVAL in test ds_continue_without_remote_resources
+
+Addressing:
+$ oscap ds sds-split remote_content_1.2.ds.xml /tmp/xxx
+$ oscap oval validate --schematron /tmp/xxx/test_single_rule.oval.xml
+<?xml version="1.0"?>
+oval:x:obj:1 - referenced variable oval:x:var:1 not found. The var_ref entity must hold a variable id that exists in the document.
+---
+ .../remote_content_1.2.ds.xml                              | 7 +++++++
+ .../remote_content_1.3.ds.xml                              | 7 +++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/tests/DS/ds_continue_without_remote_resources/remote_content_1.2.ds.xml b/tests/DS/ds_continue_without_remote_resources/remote_content_1.2.ds.xml
+index 31d4fc770..503b688ec 100644
+--- a/tests/DS/ds_continue_without_remote_resources/remote_content_1.2.ds.xml
++++ b/tests/DS/ds_continue_without_remote_resources/remote_content_1.2.ds.xml
+@@ -43,6 +43,13 @@
+       <var_ref>oval:x:var:1</var_ref>
+     </variable_object>
+     </objects>
++
++    <variables>
++      <constant_variable id="oval:x:var:1" version="1" comment="x" datatype="int">
++        <value>100</value>
++      </constant_variable>
++    </variables>
++
+ </oval_definitions>
+ </ds:component>
+ 
+diff --git a/tests/DS/ds_continue_without_remote_resources/remote_content_1.3.ds.xml b/tests/DS/ds_continue_without_remote_resources/remote_content_1.3.ds.xml
+index 3cf15f8df..bea285bc1 100644
+--- a/tests/DS/ds_continue_without_remote_resources/remote_content_1.3.ds.xml
++++ b/tests/DS/ds_continue_without_remote_resources/remote_content_1.3.ds.xml
+@@ -45,6 +45,13 @@
+       <var_ref>oval:x:var:1</var_ref>
+     </variable_object>
+     </objects>
++
++    <variables>
++      <constant_variable id="oval:x:var:1" version="1" comment="x" datatype="int">
++        <value>100</value>
++      </constant_variable>
++    </variables>
++
+ </oval_definitions>
+ </ds:component>
+ 

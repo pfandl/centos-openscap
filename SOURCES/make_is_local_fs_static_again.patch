@@ -1,0 +1,85 @@
+From 535c48739dc89efc76bfd267d3f39dca05cbebd1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Thu, 6 Jun 2019 09:14:20 +0200
+Subject: [PATCH] Make is_local_fs static again
+
+It isn't necessary to expose this function in public API.
+The function has been accidentaly introduced to public API
+in fff58197d9747a08d0fc23914a31fefbe44f07ea which hasn't
+been released yet, so it can be safe to remove it.
+---
+ src/OVAL/probes/fsdev.c                   |  4 ++--
+ src/OVAL/probes/public/fsdev.h            | 10 ----------
+ tests/API/probes/Makefile.am              |  3 ++-
+ tests/API/probes/test_fsdev_is_local_fs.c |  1 +
+ 4 files changed, 5 insertions(+), 13 deletions(-)
+
+diff --git a/src/OVAL/probes/fsdev.c b/src/OVAL/probes/fsdev.c
+index 9646cac80..f5f14ac2f 100644
+--- a/src/OVAL/probes/fsdev.c
++++ b/src/OVAL/probes/fsdev.c
+@@ -79,7 +79,7 @@ static int fsdev_cmp(const void *a, const void *b)
+ #define DEVID_ARRAY_ADD  8
+ 
+ #if defined(__linux__)
+-int is_local_fs(struct mntent *ment)
++static int is_local_fs(struct mntent *ment)
+ {
+ // todo: would it be usefull to provide the choice during build-time?
+ #if 1
+@@ -129,7 +129,7 @@ int is_local_fs(struct mntent *ment)
+ }
+ 
+ #elif defined(_AIX)
+-int is_local_fs(struct mntent *ment)
++static int is_local_fs(struct mntent *ment)
+ {
+ 	int i;
+ 	struct vfs_ent *e;
+diff --git a/src/OVAL/probes/public/fsdev.h b/src/OVAL/probes/public/fsdev.h
+index bbead1aee..29a0462c8 100644
+--- a/src/OVAL/probes/public/fsdev.h
++++ b/src/OVAL/probes/public/fsdev.h
+@@ -86,15 +86,5 @@ int fsdev_path(fsdev_t * lfs, const char *path);
+  */
+ int fsdev_fd(fsdev_t * lfs, int fd);
+ 
+-#if defined(__linux__) || defined(_AIX)
+-/**
+- * Detemines whether a given mtab entry is a local file system.
+- * @param ment Structure returned by getmntent (see `man 3 getmntent`).
+- * @retval 1 if local
+- * @retval 0 otherwise
+- */
+-int is_local_fs(struct mntent *ment);
+-#endif
+-
+ #endif				/* FSDEV_H */
+ /// @}
+diff --git a/tests/API/probes/Makefile.am b/tests/API/probes/Makefile.am
+index 459e5f3af..fa9c26b54 100644
+--- a/tests/API/probes/Makefile.am
++++ b/tests/API/probes/Makefile.am
+@@ -5,8 +5,9 @@ AM_CPPFLAGS = \
+ 	-I$(top_srcdir)/src/CPE/public \
+ 	-I$(top_srcdir)/src/CVE/public \
+ 	-I${top_srcdir}/src/CVSS/public \
+-	-I$(top_srcdir)/src/OVAL/probes/SEAP/public \
++	-I$(top_srcdir)/src/OVAL/probes \
+ 	-I$(top_srcdir)/src/OVAL/probes/public \
++	-I$(top_srcdir)/src/OVAL/probes/SEAP/public \
+ 	-I$(top_srcdir)/src/OVAL/public \
+ 	-I$(top_srcdir)/src/XCCDF/public \
+ 	-I$(top_srcdir)/src/common/public \
+diff --git a/tests/API/probes/test_fsdev_is_local_fs.c b/tests/API/probes/test_fsdev_is_local_fs.c
+index e3b4691db..085a02a31 100644
+--- a/tests/API/probes/test_fsdev_is_local_fs.c
++++ b/tests/API/probes/test_fsdev_is_local_fs.c
+@@ -28,6 +28,7 @@
+ #include <string.h>
+ #include <mntent.h>
+ #include "fsdev.h"
++#include "fsdev.c"
+ 
+ static int test_single_call()
+ {
