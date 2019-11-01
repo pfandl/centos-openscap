@@ -1,0 +1,144 @@
+From 673f338641ca90b31f00e0787cdcbb5fb19a49a1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Thu, 23 May 2019 09:07:17 +0200
+Subject: [PATCH 1/2] Extend unit test for is_local_fs from fsdev.h
+
+The test uses a fake `mtab` file which contains 1 entry for a local
+filesystem, 1 entry for a direct autofs map and 1 entry for a NFS
+system mounted using autofs. By parsing the `mtab` file only 1 local
+filesystem should be found. It will help us to test
+https://github.com/OpenSCAP/openscap/pull/1329
+---
+ tests/API/probes/Makefile.am              |  2 ++
+ tests/API/probes/fake_mtab                |  3 ++
+ tests/API/probes/test_fsdev_is_local_fs.c | 36 +++++++++++++++++++++--
+ 3 files changed, 38 insertions(+), 3 deletions(-)
+ create mode 100644 tests/API/probes/fake_mtab
+
+diff --git a/tests/API/probes/Makefile.am b/tests/API/probes/Makefile.am
+index 70442bcc3..459e5f3af 100644
+--- a/tests/API/probes/Makefile.am
++++ b/tests/API/probes/Makefile.am
+@@ -1,4 +1,5 @@
+ AM_CPPFLAGS = \
++	-DDATADIR=\"$(srcdir)/\" \
+ 	-I$(top_srcdir)/src \
+ 	-I$(top_srcdir)/src/CCE/public \
+ 	-I$(top_srcdir)/src/CPE/public \
+@@ -35,6 +36,7 @@ test_fsdev_is_local_fs_SOURCES = test_fsdev_is_local_fs.c
+ 
+ EXTRA_DIST += \
+ 	all.sh \
++	fake_mtab \
+ 	fts.sh \
+ 	gentree.sh \
+ 	test_api_probes_smoke.c \
+diff --git a/tests/API/probes/fake_mtab b/tests/API/probes/fake_mtab
+new file mode 100644
+index 000000000..26d6918bb
+--- /dev/null
++++ b/tests/API/probes/fake_mtab
+@@ -0,0 +1,3 @@
++/dev/mapper/fedora-root / ext4 rw,seclabel,relatime 0 0
++/etc/mount.map /nfs/test autofs rw,relatime,fd=17,pgrp=11111,timeout=5,minproto=5,maxproto=5,direct,pipe_ino=1246883 0 0
++192.168.122.231:/test /nfs/test nfs4 rw,relatime,vers=4.2,rsize=262144,wsize=262144,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.122.1,local_lock=none,addr=192.168.122.231 0 0
+diff --git a/tests/API/probes/test_fsdev_is_local_fs.c b/tests/API/probes/test_fsdev_is_local_fs.c
+index bcc596442..143030070 100644
+--- a/tests/API/probes/test_fsdev_is_local_fs.c
++++ b/tests/API/probes/test_fsdev_is_local_fs.c
+@@ -29,13 +29,43 @@
+ #include <mntent.h>
+ #include "fsdev.h"
+ 
+-int main(int argc, char *argv[])
++static int test_single_call()
+ {
+ 	struct mntent ment;
+ 	ment.mnt_type = "autofs";
+ 	int ret = is_local_fs(&ment);
+-	if (ret != 0) {
++	/* autofs entry is never considered local */
++	return (ret == 0);
++}
++
++static int test_multiple_calls()
++{
++	/* fake mtab contains only 1 local filesystem */
++	FILE *f = setmntent(DATADIR "fake_mtab", "r");
++	if (f == NULL) {
++		fprintf(stderr, "fake_mtab could not be open\n");
++		return 0;
++	}
++	struct mntent *ment;
++	unsigned int locals = 0;
++	while ((ment = getmntent(f)) != NULL) {
++		if (is_local_fs(ment)) {
++			locals++;
++		}
++	}
++	endmntent(f);
++	return (locals == 1);
++}
++
++int main(int argc, char *argv[])
++{
++	if (!test_single_call()) {
++		fprintf(stderr, "test_single_call has failed\n");
++		return 1;
++	}
++	if (!test_multiple_calls()) {
++		fprintf(stderr, "test_multiple_calls has failed\n");
+ 		return 1;
+ 	}
+ 	return 0;
+-}
+\ No newline at end of file
++}
+
+From 4f8fcd1a85c6840895672b7912592cc9f3c92b01 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Fri, 24 May 2019 13:48:59 +0200
+Subject: [PATCH 2/2] Add more entries into fake mtab
+
+---
+ tests/API/probes/fake_mtab                | 4 ++++
+ tests/API/probes/test_fsdev_is_local_fs.c | 7 +++++--
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/tests/API/probes/fake_mtab b/tests/API/probes/fake_mtab
+index 26d6918bb..94b1fe295 100644
+--- a/tests/API/probes/fake_mtab
++++ b/tests/API/probes/fake_mtab
+@@ -1,3 +1,7 @@
+ /dev/mapper/fedora-root / ext4 rw,seclabel,relatime 0 0
++tmpfs /tmp tmpfs rw,seclabel,nosuid,nodev 0 0
+ /etc/mount.map /nfs/test autofs rw,relatime,fd=17,pgrp=11111,timeout=5,minproto=5,maxproto=5,direct,pipe_ino=1246883 0 0
+ 192.168.122.231:/test /nfs/test nfs4 rw,relatime,vers=4.2,rsize=262144,wsize=262144,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.122.1,local_lock=none,addr=192.168.122.231 0 0
++/dev/mapper/fedora-home /home ext4 rw,seclabel,relatime 0 0
++proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
++//192.168.0.5/storage /media/movies cifs guest,uid=myuser,iocharset=utf8,file_mode=0777,dir_mode=0777,noperm 0 0
+diff --git a/tests/API/probes/test_fsdev_is_local_fs.c b/tests/API/probes/test_fsdev_is_local_fs.c
+index 143030070..e3b4691db 100644
+--- a/tests/API/probes/test_fsdev_is_local_fs.c
++++ b/tests/API/probes/test_fsdev_is_local_fs.c
+@@ -40,7 +40,10 @@ static int test_single_call()
+ 
+ static int test_multiple_calls()
+ {
+-	/* fake mtab contains only 1 local filesystem */
++	/*
++	 * fake mtab contains only 4 local filesystems:
++	 * /, /tmp, /home and /proc
++	 */
+ 	FILE *f = setmntent(DATADIR "fake_mtab", "r");
+ 	if (f == NULL) {
+ 		fprintf(stderr, "fake_mtab could not be open\n");
+@@ -54,7 +57,7 @@ static int test_multiple_calls()
+ 		}
+ 	}
+ 	endmntent(f);
+-	return (locals == 1);
++	return (locals == 4);
+ }
+ 
+ int main(int argc, char *argv[])

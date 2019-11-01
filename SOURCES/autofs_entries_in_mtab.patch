@@ -1,0 +1,192 @@
+From 309f8230d67f229b6091876c3ace62370fb3d451 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Fri, 17 May 2019 10:25:08 +0200
+Subject: [PATCH 1/2] Handle autofs entries in /etc/mtab
+
+Some file systems can be mounted using autofs, which should be
+considered during analysis of /etc/mtab.F or more details,
+please see the comment introduced in this patch.
+---
+ src/OVAL/probes/fsdev.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/src/OVAL/probes/fsdev.c b/src/OVAL/probes/fsdev.c
+index ca6304890..29250f2bf 100644
+--- a/src/OVAL/probes/fsdev.c
++++ b/src/OVAL/probes/fsdev.c
+@@ -125,6 +125,20 @@ is_local_fs(struct mntent *ment)
+ #if 1
+ 	char *s;
+ 
++	/*
++	 * When type of the filesystem is autofs, it means the mtab entry
++	 * describes the autofs configuration, which means ment->mnt_fsname
++	 * is a path to the relevant autofs map, eg. /etc/auto.misc. In this
++	 * situation, the following code which analyses ment->mnt_type would
++	 * not work. When the filesystem handled by autofs is mounted, there
++	 * is another different entry in mtab which contains the real block
++	 * special device or remote filesystem in ment->mnt_fsname, and that
++	 * will be parsed in a different call of this function.
++	 */
++	if (!strcmp(ment->mnt_type, "autofs")) {
++		return 0;
++	}
++
+ 	s = ment->mnt_fsname;
+ 	/* If the fsname begins with "//", it is probably CIFS. */
+ 	if (s[0] == '/' && s[1] == '/')
+
+From fff58197d9747a08d0fc23914a31fefbe44f07ea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Fri, 17 May 2019 16:16:23 +0200
+Subject: [PATCH 2/2] Test is_local_fs
+
+Adds a simple unit test that checks whether autofs entries in
+/etc/mtab are not considered local.
+---
+ src/OVAL/probes/fsdev.c                   |  6 ++--
+ src/OVAL/probes/public/fsdev.h            | 14 ++++++++
+ tests/API/probes/Makefile.am              |  6 ++--
+ tests/API/probes/all.sh                   |  1 +
+ tests/API/probes/test_fsdev_is_local_fs.c | 41 +++++++++++++++++++++++
+ 5 files changed, 62 insertions(+), 6 deletions(-)
+ create mode 100644 tests/API/probes/test_fsdev_is_local_fs.c
+
+diff --git a/src/OVAL/probes/fsdev.c b/src/OVAL/probes/fsdev.c
+index 29250f2bf..d455b39c4 100644
+--- a/src/OVAL/probes/fsdev.c
++++ b/src/OVAL/probes/fsdev.c
+@@ -118,8 +118,7 @@ static int match_fs(const char *fsname, const char **fs_arr, size_t fs_cnt)
+ #define DEVID_ARRAY_ADD  8
+ 
+ #if defined(__linux__)
+-static int
+-is_local_fs(struct mntent *ment)
++int is_local_fs(struct mntent *ment)
+ {
+ // todo: would it be usefull to provide the choice during build-time?
+ #if 1
+@@ -169,8 +168,7 @@ is_local_fs(struct mntent *ment)
+ }
+ 
+ #elif defined(_AIX)
+-static int
+-is_local_fs(struct mntent *ment)
++int is_local_fs(struct mntent *ment)
+ {
+ 	int i;
+ 	struct vfs_ent *e;
+diff --git a/src/OVAL/probes/public/fsdev.h b/src/OVAL/probes/public/fsdev.h
+index 382ec536b..aeb455df1 100644
+--- a/src/OVAL/probes/public/fsdev.h
++++ b/src/OVAL/probes/public/fsdev.h
+@@ -36,6 +36,10 @@
+ #include <stdint.h>
+ #include <sys/stat.h>
+ 
++#if defined(__linux__) || defined(_AIX)
++#include <mntent.h>
++#endif
++
+ /**
+  * Filesystem device structure.
+  */
+@@ -88,5 +92,15 @@ int fsdev_path(fsdev_t * lfs, const char *path);
+  */
+ int fsdev_fd(fsdev_t * lfs, int fd);
+ 
++#if defined(__linux__) || defined(_AIX)
++/**
++ * Detemines whether a given mtab entry is a local file system.
++ * @param ment Structure returned by getmntent (see `man 3 getmntent`).
++ * @retval 1 if local
++ * @retval 0 otherwise
++ */
++int is_local_fs(struct mntent *ment);
++#endif
++
+ #endif				/* FSDEV_H */
+ /// @}
+diff --git a/tests/API/probes/Makefile.am b/tests/API/probes/Makefile.am
+index e26a47e63..70442bcc3 100644
+--- a/tests/API/probes/Makefile.am
++++ b/tests/API/probes/Makefile.am
+@@ -26,14 +26,16 @@ TESTS_ENVIRONMENT = \
+ 		$(top_builddir)/run
+ 
+ TESTS = all.sh
+-check_PROGRAMS = test_api_probes_smoke oval_fts_list
++check_PROGRAMS = test_api_probes_smoke oval_fts_list test_fsdev_is_local_fs
+ 
+ test_api_probes_smoke_SOURCES = test_api_probes_smoke.c
+ oval_fts_list_CFLAGS= -I$(top_srcdir)/src/OVAL/probes
+ oval_fts_list_SOURCES= oval_fts_list.c
++test_fsdev_is_local_fs_SOURCES = test_fsdev_is_local_fs.c
+ 
+ EXTRA_DIST += \
+ 	all.sh \
+ 	fts.sh \
+ 	gentree.sh \
+-	test_api_probes_smoke.c
++	test_api_probes_smoke.c \
++	test_fsdev_is_local_fs.c
+diff --git a/tests/API/probes/all.sh b/tests/API/probes/all.sh
+index e0c35de88..46c680667 100755
+--- a/tests/API/probes/all.sh
++++ b/tests/API/probes/all.sh
+@@ -7,6 +7,7 @@ test_init "test_api_probes.log"
+ if [ -z ${CUSTOM_OSCAP+x} ] ; then
+     test_run "fts test" $srcdir/fts.sh
+     test_run "probe api smoke test" ./test_api_probes_smoke
++    test_run "fsdev is_local_fs unit test" ./test_fsdev_is_local_fs
+ fi
+ 
+ test_exit
+diff --git a/tests/API/probes/test_fsdev_is_local_fs.c b/tests/API/probes/test_fsdev_is_local_fs.c
+new file mode 100644
+index 000000000..bcc596442
+--- /dev/null
++++ b/tests/API/probes/test_fsdev_is_local_fs.c
+@@ -0,0 +1,41 @@
++/*
++ * Copyright 2019 Red Hat Inc., Durham, North Carolina.
++ * All Rights Reserved.
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ * Authors:
++ *      "Jan Černý" <jcerny@redhat.com>
++ */
++
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
++#include <stdio.h>
++#include <string.h>
++#include <mntent.h>
++#include "fsdev.h"
++
++int main(int argc, char *argv[])
++{
++	struct mntent ment;
++	ment.mnt_type = "autofs";
++	int ret = is_local_fs(&ment);
++	if (ret != 0) {
++		return 1;
++	}
++	return 0;
++}
+\ No newline at end of file

@@ -1,0 +1,58 @@
+From 7d31c404ab6c90d19c378aaefdd70baf1a62f142 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cern=C3=BD?= <jcerny@redhat.com>
+Date: Mon, 18 Mar 2019 16:35:45 +0100
+Subject: [PATCH] Don't ignore file behaviors if filepath is specified
+
+The effect of the code removed by this patch is that the
+max_depth, recurse, recurse_direction and recurse_file_system
+attributes of the behaviors element are completely ignored
+and reset to their default values if filepath element is specified
+in the textfilecontent54_object. This is against OVAL specification
+and it is inconsistent with file probe, from where a similar
+code has been removed in 93d5f1416f232d6fa21fe8f2ad771d003749ea7b.
+---
+ .../probes/independent/textfilecontent54.c    | 31 -------------------
+ 1 file changed, 31 deletions(-)
+
+diff --git a/src/OVAL/probes/independent/textfilecontent54.c b/src/OVAL/probes/independent/textfilecontent54.c
+index fc0f944e5..5f5890e15 100644
+--- a/src/OVAL/probes/independent/textfilecontent54.c
++++ b/src/OVAL/probes/independent/textfilecontent54.c
+@@ -415,37 +415,6 @@ int probe_main(probe_ctx *ctx, void *arg)
+ 	m_val = "1";
+         */
+ 
+-	/* reset filebehavior attributes if 'filepath' entity is used */
+-	if (filepath_ent != NULL && bh_ent != NULL) {
+-		SEXP_t *r1, *r2, *r3;
+-		r1 = r2 = r3 = NULL;
+-		if (probe_ent_attrexists(bh_ent, "ignore_case")) {
+-			r1 = probe_ent_getattrval(bh_ent, "ignore_case");
+-		}
+-		if (probe_ent_attrexists(bh_ent, "multiline")) {
+-			r2 = probe_ent_getattrval(bh_ent, "multiline");
+-		}
+-		if (probe_ent_attrexists(bh_ent, "singleline")) {
+-			r3 = probe_ent_getattrval(bh_ent, "singleline");
+-		}
+-		r0 = SEXP_list_new(NULL);
+-		SEXP_free(bh_ent);
+-		bh_ent = probe_ent_creat1("behaviors", r0, NULL);
+-		SEXP_free(r0);
+-		if (r1) {
+-			probe_ent_attr_add(bh_ent, "ignore_case", r1);
+-			SEXP_free(r1);
+-		}
+-		if (r2) {
+-			probe_ent_attr_add(bh_ent, "multiline", r2);
+-			SEXP_free(r2);
+-		}
+-		if (r3) {
+-			probe_ent_attr_add(bh_ent, "singleline", r3);
+-			SEXP_free(r3);
+-		}
+-	}
+-
+ 	probe_tfc54behaviors_canonicalize(&bh_ent);
+ 
+ 	pfd.instance_ent = inst_ent;
