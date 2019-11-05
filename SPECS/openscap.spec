@@ -1,18 +1,11 @@
 Name:           openscap
-Version:        1.3.0
-Release:        7%{?dist}
+Version:        1.3.1
+Release:        1%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        https://github.com/OpenSCAP/%{name}/releases/download/%{version}/%{name}-%{version}.tar.gz
-Patch1:         add_rhel8_cpe.patch
-Patch2:         openscap-1.3.1-swig.patch
-Patch3:         fix_oscap_ssh_sudo.patch
-Patch4:         fix_procps_tests.patch
-Patch5:         manpage_update_modify.patch
-Patch6:         manpage_update_remove.patch
-Patch7:         fix_unresolved_symbols_in_SCE_library.patch
 BuildRequires:  cmake >= 2.6
 BuildRequires:  swig libxml2-devel libxslt-devel perl-generators perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -114,13 +107,6 @@ for developing applications that use %{name}-engine-sce.
 
 %prep
 %setup -q
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
 mkdir build
 
 %build
@@ -129,6 +115,7 @@ cd build
         -DENABLE_DOCS=ON \
         -DENABLE_OSCAP_UTIL_DOCKER=OFF \
         -DENABLE_OSCAP_UTIL_CHROOT=OFF \
+        -DENABLE_OSCAP_UTIL_PODMAN=OFF \
         -DENABLE_OSCAP_UTIL_VM=OFF \
         ..
 make %{?_smp_mflags}
@@ -185,7 +172,7 @@ rm -rf $RPM_BUILD_ROOT
 %files scanner
 %{_mandir}/man8/oscap.8.gz
 %{_bindir}/oscap
-# RHEL-8.0.0 will not support oscap-chroot. Future releases may include this. Note: remove double % when enabling command.
+# RHEL-8.1.0 will not support oscap-chroot. Future releases may include this. Note: remove double % when enabling command.
 #%%{_mandir}/man8/oscap-chroot.8.gz
 #%%{_bindir}/oscap-chroot
 %{_sysconfdir}/bash_completion.d
@@ -194,7 +181,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc docs/oscap-scan.cron
 %{_mandir}/man8/oscap-ssh.8.gz
 %{_bindir}/oscap-ssh
-# RHEL-8.0.0 will not support oscap-vm. Future releases may include this. Note: remove double % when enabling command.
+# RHEL-8.1.0 will not support oscap-vm and oscap-podman. Future releases may include this. Note: remove double % when enabling command.
+#%%{_mandir}/man8/oscap-podman.8.gz
+#%%{_bindir}/oscap/oscap-podman
 #%%{_mandir}/man8/oscap-vm.8.gz
 #%%{_bindir}/oscap/oscap-vm
 %{_mandir}/man8/scap-as-rpm.8.gz
@@ -204,6 +193,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
+* Fri Jun 14 2019 Evgeny Kolesnikov <ekolesni@redhat.com> - 1.3.1-1
+- Bumped the package release number
+
+* Thu Jun 13 2019 Evgeny Kolesnikov <ekolesni@redhat.com> - 1.3.1-0
+- Upgrade to the latest upstream release (rhbz#1718826)
+- Support for SCAP 1.3 Source Datastreams (evaluating, XML schemas, validation) (rhbz#1709429)
+- Tailoring files are included in ARF result files
+- Remote filesystems mounted using `autofs` direct maps are not recognized as local filesystems (rhbz#1655943)
+- Offline scan utilizing rpmverifyfile probe fails in fchdir and aborts (rhbz#1636431)
+
 * Wed Jan 16 2019 Gabriel Becker <ggasparb@redhat.com> - 1.3.0-7
 - Removed oscap-vm binary and manpage files from build as they will not be supported by RHEL-8.0.0.
 - Explicitly specify which files should be in openscap-utils subpackage.
