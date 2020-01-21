@@ -1,11 +1,12 @@
 Name:           openscap
 Version:        1.3.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Set of open source libraries enabling integration of the SCAP line of standards
 Group:          System Environment/Libraries
 License:        LGPLv2+
 URL:            http://www.open-scap.org/
 Source0:        https://github.com/OpenSCAP/%{name}/releases/download/%{version}/%{name}-%{version}.tar.gz
+Patch1:         fix_report_a11y.patch
 BuildRequires:  cmake >= 2.6
 BuildRequires:  swig libxml2-devel libxslt-devel perl-generators perl-XML-Parser
 BuildRequires:  rpm-devel
@@ -107,6 +108,7 @@ for developing applications that use %{name}-engine-sce.
 
 %prep
 %setup -q
+%patch1 -p1
 mkdir build
 
 %build
@@ -193,6 +195,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libopenscap_sce.so.*
 
 %changelog
+* Fri Nov 01 2019 Vojtech Polasek <vpolasek@redhat.com> - 1.3.1-2
+- Fixed XSLT template making rule details in reports accessible for screenreader users (#1767382)
+
 * Fri Jun 14 2019 Evgeny Kolesnikov <ekolesni@redhat.com> - 1.3.1-1
 - Bumped the package release number
 
